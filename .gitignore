@@ -15,14 +15,11 @@
 *.swp
 *.swo
 
-# Ignore dependency files 
-go.mod
-go.sum
-
 # Ignore Go cache and build files
 bin/
 pkg/
 *.log
+\tmp
 
 # Ignore system-specific files
 .DS_Store
