@@ -1,0 +1,99 @@
+{
+  "type": "object",
+  "properties": {
+    "tweets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "original_tweet_data": {
+            "type": "object",
+            "properties": {
+              "tweet_text": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" },
+              "user": {
+                "type": "object",
+                "properties": {
+                  "username": { "type": "string" },
+                  "verified": { "type": "boolean" },
+                  "followers_count": { "type": "integer" }
+                },
+                "required": ["username", "verified", "followers_count"]
+              },
+              "hashtags": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "required": ["tweet_text", "timestamp", "user", "hashtags"]
+          },
+          "analysis": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "disaster_name": {
+                  "type": "string",
+                  "enum": ["Wildfire", "Flood", "Earthquake", "Hurricane"]
+                },
+                "relevant_to_disaster": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "sentiment": {
+                  "type": "object",
+                  "properties": {
+                    "emotion": {
+                      "type": "string",
+                      "enum": ["fear", "sadness", "anger", "neutral", "joy"]
+                    },
+                    "tone": {
+                      "type": "string",
+                      "enum": ["urgent", "calm", "sarcastic", "worried"]
+                    },
+                    "polarity": {
+                      "type": "number",
+                      "minimum": -1,
+                      "maximum": 1
+                    },
+                    "details": {
+                      "type": "object",
+                      "properties": {
+                        "urgency": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "emotional_impact": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      },
+                      "required": ["urgency", "emotional_impact"]
+                    }
+                  },
+                  "required": ["emotion", "tone", "polarity", "details"]
+                },
+                "sarcasm_confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "disaster_name",
+                "relevant_to_disaster",
+                "sentiment",
+                "sarcasm_confidence"
+              ]
+            }
+          }
+        },
+        "required": ["original_tweet_data", "analysis"]
+      }
+    }
+  },
+  "required": ["tweets"]
+}

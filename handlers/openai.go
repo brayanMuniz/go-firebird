@@ -26,7 +26,7 @@ func CallOpenAI(c *gin.Context) {
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleSystem,
-					Content: "You are an assistant specializing in analyzing the sentiment of tweets.",
+					Content: "You are an assistant specializing in analyzing the sentiment of tweets. Your job is to rate each tweet based on its relevance to predefined disaster categories and return a confidence level for each disaster. Additionally, include sentiment analysis for each disaster category. You will be provided with a list of tweets, and your response should adhere to the following JSON schema. ",
 				},
 				{
 					Role:    openai.ChatMessageRoleUser,

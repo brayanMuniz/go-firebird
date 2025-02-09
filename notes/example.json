@@ -1,0 +1,47 @@
+{
+  "tweets": [
+    {
+      "original_tweet_data": {
+        "tweet_text": "The wildfire is spreading rapidly near residential areas.",
+        "timestamp": "2023-10-25T14:30:00Z",
+        "user": {
+          "username": "@exampleuser",
+          "verified": true,
+          "followers_count": 12500
+        },
+        "hashtags": ["#wildfire", "#emergency", "#disaster"]
+      },
+      "analysis": [
+        {
+          "disaster_name": "Wildfire",
+          "relevant_to_disaster": 0.95,
+          "sentiment": {
+            "emotion": "fear",
+            "tone": "urgent",
+            "polarity": -0.9,
+            "details": {
+              "urgency": 0.9,
+              "emotional_impact": 0.85
+            }
+          },
+          "sarcasm_confidence": 0.05
+        },
+        {
+          "disaster_name": "Flood",
+          "relevant_to_disaster": 0.1,
+          "sentiment": {
+            "emotion": "neutral",
+            "tone": "calm",
+            "polarity": 0.2,
+            "details": {
+              "urgency": 0.2,
+              "emotional_impact": 0.1
+            }
+          },
+          "sarcasm_confidence": 0.02
+        }
+      ]
+    }
+  ]
+}
+
