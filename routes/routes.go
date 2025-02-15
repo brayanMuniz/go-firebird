@@ -20,6 +20,7 @@ func SetupRouter() *gin.Engine {
 		api.GET("/bluesky", handlers.FetchBluesky)
 		api.POST("/classify", handlers.CallOpenAI)
 		api.GET("/demo", handlers.GetDemoData)
+		api.GET("/testhook", handlers.TestClientHook)
 	}
 
 	return r
