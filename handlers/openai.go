@@ -5,40 +5,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sashabaranov/go-openai"
 	"github.com/sashabaranov/go-openai/jsonschema"
+	"go-firebird/types"
 	"log"
 	"net/http"
 	"os"
 )
-
-type TweetAnalysis struct {
-	Tweets []struct {
-		OriginalTweetData struct {
-			TweetText string `json:"tweet_text" jsonschema:"default="`
-			Timestamp string `json:"timestamp" jsonschema:"default="`
-			User      struct {
-				Username       string `json:"username" jsonschema:"default="`
-				Verified       bool   `json:"verified" jsonschema:"default=false"`
-				FollowersCount int    `json:"followers_count" jsonschema:"default=0"`
-			} `json:"user"`
-			Hashtags []string `json:"hashtags" jsonschema:"default=[]"`
-		} `json:"original_tweet_data"`
-		Analysis []struct {
-			// Only allowed disasters
-			DisasterName       string  `json:"disaster_name" jsonschema:"enum=Wildfire,Flood,Earthquake,Hurricane,Tornado,Tsunami,Volcanic Eruption,Landslide,Blizzard,Drought;default="`
-			RelevantToDisaster float64 `json:"relevant_to_disaster" jsonschema:"default=0"`
-			Sentiment          struct {
-				Emotion  string  `json:"emotion" jsonschema:"default="`
-				Tone     string  `json:"tone" jsonschema:"default="`
-				Polarity float64 `json:"polarity" jsonschema:"default=0"`
-				Details  struct {
-					Urgency         float64 `json:"urgency" jsonschema:"default=0"`
-					EmotionalImpact float64 `json:"emotional_impact" jsonschema:"default=0"`
-				} `json:"details"`
-			} `json:"sentiment"`
-			SarcasmConfidence float64 `json:"sarcasm_confidence" jsonschema:"default=0"`
-		} `json:"analysis"`
-	} `json:"tweets"`
-}
 
 func CallOpenAI(c *gin.Context) {
 	var request struct {
@@ -53,7 +24,7 @@ func CallOpenAI(c *gin.Context) {
 	ctx := context.Background()
 
 	// Generate JSON schema from Go struct
-	var result TweetAnalysis
+	var result types.TweetAnalysis
 	schema, err := jsonschema.GenerateSchemaForType(result)
 	if err != nil {
 		log.Fatalf("GenerateSchemaForType error: %v", err)
@@ -68,8 +39,8 @@ func CallOpenAI(c *gin.Context) {
 				Content: "You are an AI assistant specializing in disaster tweet analysis. " +
 					"Classify each tweet according to disaster relevance, analyze sentiment, and " +
 					"estimate sarcasm confidence. " +
-					"Return the results in the defined structured format. If a field is not provided, " +
-					"leave it as its default value (e.g. empty strings, 0, false, or empty arrays).",
+					"Return the results in the EXACT JSON format that follows this schema, ensuring every field is properly structured. " +
+					"Do NOT return any extra text before or after the JSON.",
 			},
 			{
 				Role:    openai.ChatMessageRoleUser,
@@ -84,8 +55,10 @@ func CallOpenAI(c *gin.Context) {
 				Strict: true,
 			},
 		},
-		MaxTokens: 500,
+		MaxTokens: 1500,
 	})
+
+	log.Printf("Raw OpenAI Response: %s", resp.Choices[0].Message.Content)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -95,7 +68,8 @@ func CallOpenAI(c *gin.Context) {
 	// Unmarshal structured response
 	err = schema.Unmarshal(resp.Choices[0].Message.Content, &result)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse structured response"})
+		log.Printf("Failed to parse OpenAI response: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "OpenAI returned invalid JSON format"})
 		return
 	}
 

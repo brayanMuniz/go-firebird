@@ -21,6 +21,7 @@ func SetupRouter() *gin.Engine {
 		api.POST("/classify", handlers.CallOpenAI)
 		api.GET("/demo", handlers.GetDemoData)
 		api.GET("/testhook", handlers.TestClientHook)
+		api.GET("/simulate", handlers.SimulateDisasterTweets)
 	}
 
 	return r
