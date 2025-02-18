@@ -1,7 +1,5 @@
 package types
 
-import ()
-
 // TweetAnalysis wraps multiple tweets
 type TweetAnalysis struct {
 	Tweets []Tweet `json:"tweets"`

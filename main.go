@@ -1,9 +1,12 @@
 package main
 
 import (
-	"github.com/joho/godotenv"
+	"fmt"
 	"go-firebird/routes"
 	"log"
+	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -12,6 +15,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
+
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey != "" {
+		fmt.Println("OPENAI_API_KEY loaded")
+
+	}
+
+	clientURL := os.Getenv("CLIENT_URL")
+	fmt.Println("CLIENT_URL: ", clientURL)
 
 	r := routes.SetupRouter()
 	if err := r.Run(":8080"); err != nil {

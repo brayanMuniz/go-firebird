@@ -300,6 +300,306 @@
                     "sarcasm_confidence": 0
                 }
             ]
+        },         {
+            "original_tweet_data": {
+                "tweet_text": "Massive wildfire spreading rapidly! Evacuate immediately! #Wildfire #Emergency",
+                "timestamp": "",
+                "user": {
+                    "username": "disaster_alerts",
+                    "verified": true,
+                    "followers_count": 150000
+                },
+                "hashtags": [
+                    "Wildfire",
+                    "Emergency"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Wildfire",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "fear",
+                        "tone": "urgent",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 5,
+                            "emotional_impact": 5
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
+        },
+        {
+            "original_tweet_data": {
+                "tweet_text": "Severe flooding in downtown! Roads submerged, stay indoors if possible. #Flood",
+                "timestamp": "",
+                "user": {
+                    "username": "weatherwatch",
+                    "verified": true,
+                    "followers_count": 200000
+                },
+                "hashtags": [
+                    "Flood"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Flood",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "warning",
+                        "tone": "serious",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 4,
+                            "emotional_impact": 4
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
+        },
+        {
+            "original_tweet_data": {
+                "tweet_text": "Breaking: A 6.5 magnitude earthquake just hit California! Stay safe! #Earthquake",
+                "timestamp": "",
+                "user": {
+                    "username": "quakealert",
+                    "verified": false,
+                    "followers_count": 50000
+                },
+                "hashtags": [
+                    "Earthquake"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Earthquake",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "fear",
+                        "tone": "urgent",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 5,
+                            "emotional_impact": 5
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
+        },
+        {
+            "original_tweet_data": {
+                "tweet_text": "Hurricane approaching the coast! Winds reaching 120 mph. Take precautions! #Hurricane",
+                "timestamp": "",
+                "user": {
+                    "username": "stormtracker",
+                    "verified": true,
+                    "followers_count": 175000
+                },
+                "hashtags": [
+                    "Hurricane"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Hurricane",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "fear",
+                        "tone": "urgent",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 5,
+                            "emotional_impact": 5
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
+        },
+        {
+            "original_tweet_data": {
+                "tweet_text": "Tornado touchdown spotted near Tulsa! Seek shelter immediately! #TornadoWarning",
+                "timestamp": "",
+                "user": {
+                    "username": "stormchasers",
+                    "verified": false,
+                    "followers_count": 75000
+                },
+                "hashtags": [
+                    "TornadoWarning"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Tornado",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "fear",
+                        "tone": "urgent",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 5,
+                            "emotional_impact": 5
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
+        },
+        {
+            "original_tweet_data": {
+                "tweet_text": "A tsunami warning has been issued following the earthquake! Move to higher ground! #TsunamiAlert",
+                "timestamp": "",
+                "user": {
+                    "username": "oceansafety",
+                    "verified": true,
+                    "followers_count": 130000
+                },
+                "hashtags": [
+                    "TsunamiAlert"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Tsunami",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "fear",
+                        "tone": "urgent",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 5,
+                            "emotional_impact": 5
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
+        },
+        {
+            "original_tweet_data": {
+                "tweet_text": "The volcano is erupting! Lava flow moving fast! Avoid the area! #VolcanoEruption",
+                "timestamp": "",
+                "user": {
+                    "username": "geologynews",
+                    "verified": false,
+                    "followers_count": 82000
+                },
+                "hashtags": [
+                    "VolcanoEruption"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Volcano",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "fear",
+                        "tone": "urgent",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 5,
+                            "emotional_impact": 5
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
+        },
+        {
+            "original_tweet_data": {
+                "tweet_text": "Heavy snowstorm causing road closures. Travel only if necessary! #Blizzard",
+                "timestamp": "",
+                "user": {
+                    "username": "weatherupdates",
+                    "verified": true,
+                    "followers_count": 95000
+                },
+                "hashtags": [
+                    "Blizzard"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Blizzard",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "caution",
+                        "tone": "cautious",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 3,
+                            "emotional_impact": 3
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
+        },
+        {
+            "original_tweet_data": {
+                "tweet_text": "Major landslide reported on the highway! Avoid Route 56! #Landslide",
+                "timestamp": "",
+                "user": {
+                    "username": "trafficwatch",
+                    "verified": false,
+                    "followers_count": 60000
+                },
+                "hashtags": [
+                    "Landslide"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Landslide",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "warning",
+                        "tone": "serious",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 4,
+                            "emotional_impact": 4
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
+        },
+        {
+            "original_tweet_data": {
+                "tweet_text": "Severe drought conditions continue. Water restrictions in effect! #Drought",
+                "timestamp": "",
+                "user": {
+                    "username": "climatewatch",
+                    "verified": true,
+                    "followers_count": 120000
+                },
+                "hashtags": [
+                    "Drought"
+                ]
+            },
+            "analysis": [
+                {
+                    "disaster_name": "Drought",
+                    "relevant_to_disaster": 1,
+                    "sentiment": {
+                        "emotion": "concern",
+                        "tone": "concerned",
+                        "polarity": -1,
+                        "details": {
+                            "urgency": 2,
+                            "emotional_impact": 2
+                        }
+                    },
+                    "sarcasm_confidence": 0
+                }
+            ]
         }
     ]
 }

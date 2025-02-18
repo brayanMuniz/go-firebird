@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"go-firebird/types"
 	"io"
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 func GetDemoData(c *gin.Context) {
@@ -41,7 +40,8 @@ func SimulateDisasterTweets(c *gin.Context) {
 	allGood := true
 
 	// Endpoint where tweets will be sent
-	url := "http://localhost:3000/api/tweetHook"
+	baseURL := os.Getenv("CLIENT_URL")
+	url := fmt.Sprintf("%s/api/tweetHook", baseURL)
 
 	// Loop through tweets and send them one by one
 	for i, tweet := range tweetData.Tweets {
@@ -78,7 +78,7 @@ func SimulateDisasterTweets(c *gin.Context) {
 		fmt.Printf("\n")
 
 		// Delay before sending the next tweet
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 
 	if allGood {
@@ -102,8 +102,8 @@ func TestClientHook(c *gin.Context) {
 		return
 	}
 
-	// Tweet hook endpoint
-	url := "http://localhost:3000/api/tweetHook"
+	baseURL := os.Getenv("CLIENT_URL")
+	url := fmt.Sprintf("%s/api/tweetHook", baseURL)
 
 	// Send POST request
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))

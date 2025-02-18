@@ -2,13 +2,14 @@ package handlers
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
-	"github.com/sashabaranov/go-openai"
-	"github.com/sashabaranov/go-openai/jsonschema"
 	"go-firebird/types"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/gin-gonic/gin"
+	"github.com/sashabaranov/go-openai"
+	"github.com/sashabaranov/go-openai/jsonschema"
 )
 
 func CallOpenAI(c *gin.Context) {
@@ -20,7 +21,13 @@ func CallOpenAI(c *gin.Context) {
 		return
 	}
 
-	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Missing OpenAI API Key"})
+		return
+	}
+
+	client := openai.NewClient(apiKey)
 	ctx := context.Background()
 
 	// Generate JSON schema from Go struct
@@ -55,7 +62,7 @@ func CallOpenAI(c *gin.Context) {
 				Strict: true,
 			},
 		},
-		MaxTokens: 1500,
+		MaxTokens: 2000,
 	})
 
 	log.Printf("Raw OpenAI Response: %s", resp.Choices[0].Message.Content)

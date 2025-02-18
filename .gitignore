@@ -24,3 +24,6 @@ pkg/
 # Ignore system-specific files
 .DS_Store
 Thumbs.db
+
+# binary 
+go-firebird
