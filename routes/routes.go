@@ -17,7 +17,7 @@ func SetupRouter() *gin.Engine {
 	// api routes
 	api := r.Group("/api/firebird")
 	{
-		api.GET("/bluesky", handlers.FetchBluesky)
+		api.GET("/bluesky", handlers.FetchBlueskyHandler)
 		api.POST("/classify", handlers.CallOpenAI)
 		api.GET("/demo", handlers.GetDemoData)
 		api.GET("/testhook", handlers.TestClientHook)
