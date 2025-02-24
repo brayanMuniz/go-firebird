@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/bluesky-social/indigo/xrpc"
-	"github.com/robfig/cron/v3"
 	"go-firebird/types"
 	"log"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/robfig/cron/v3"
 )
 
 // Example output
@@ -20,8 +22,18 @@ import (
 
 // NOTE: This will later be changed to send to the model, but for testing this works
 
-// sendToLocalhost sends the fetched feed data to a local server for testing
-func sendToLocalhost(data types.FeedResponse) {
+// sendToClient sends the fetched feed data to the client URL specified in the environment
+func sendToClient(data types.FeedResponse) {
+	clientBaseURL := os.Getenv("CLIENT_URL")
+	if clientBaseURL == "" {
+		log.Println("CLIENT_URL is not set. Defaulting to http://localhost:3000")
+		clientBaseURL = "http://localhost:3000"
+	}
+
+	// Append the API route to the base URL
+	clientURL := clientBaseURL + "/api/testing"
+	log.Println("cronjobs client_url: ", clientURL)
+
 	// Convert the struct to JSON
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -29,15 +41,15 @@ func sendToLocalhost(data types.FeedResponse) {
 		return
 	}
 
-	// Send a POST request to localhost:3000/api/testing
-	resp, err := http.Post("http://localhost:3000/api/testing", "application/json", bytes.NewBuffer(jsonData))
+	// Send a POST request to the client URL
+	resp, err := http.Post(clientURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Printf("Error sending data to localhost:3000/api/testing: %v", err)
+		log.Printf("Error sending data to %s: %v", clientURL, err)
 		return
 	}
 	defer resp.Body.Close()
 
-	log.Printf("Sent data to localhost:3000/api/testing with response: %v", resp.Status)
+	log.Printf("Sent data to %s with response: %v", clientURL, resp.Status)
 }
 
 // FetchBlueskyHandler fetches a hydrated feed using the Bluesky API.
@@ -91,8 +103,8 @@ func callFeed(p FeedCallParameters) {
 	}
 
 	log.Printf("Feed gotten")
-	log.Printf("Sending to localhost:3000/testing")
-	sendToLocalhost(out)
+	log.Printf("Sending to client")
+	sendToClient(out)
 }
 
 func InitCronJobs() {
