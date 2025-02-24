@@ -60,6 +60,6 @@ func FetchBlueskyHandler(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Fetched feed via xrpc: %+v", out)
+	log.Printf("Fetched feed via xrpc")
 	c.JSON(http.StatusOK, out)
 }
