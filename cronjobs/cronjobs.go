@@ -107,12 +107,15 @@ func callFeed(p FeedCallParameters) {
 	sendToClient(out)
 }
 
+// NOTE: If you want to change it to run every hour:
+//
+//	_, err := c.AddFunc("0 * * * *", func() {
 func InitCronJobs() {
 	log.Println("Starting Cron Jobs")
 	c := cron.New()
 
 	// Function 1: Run every 5 minutes at 0 minutes
-	_, err := c.AddFunc("*/5 * * * *", func() {
+	_, err := c.AddFunc("/5 * * * *", func() {
 		log.Println("Function 1 running every 5 minutes")
 		feedAtURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejsyozb6iq"
 		callFeed(FeedCallParameters{uri: feedAtURI, limit: 10, cursor: ""})

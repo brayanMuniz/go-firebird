@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"context"
-	"github.com/bluesky-social/indigo/xrpc"
-	"github.com/gin-gonic/gin"
 	"go-firebird/types"
 	"log"
 	"net/http"
+	"strings"
 	"time"
+
+	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/gin-gonic/gin"
 )
 
 // documentation: https://github.com/bluesky-social/indigo/blob/2503553ea604ea7f0bfa6a021b284b371ac2ac96/xrpc/xrpc.go#L114
@@ -37,18 +39,19 @@ func FetchBlueskyHandler(c *gin.Context) {
 	// Read query parameters
 	limit := c.DefaultQuery("limit", "10") // Default to 10 if not specified
 	cursor := c.Query("cursor")            // Cursor for pagination, empty if not provided
+	// Request removes the +, so we add it back
+	if cursor != "" {
+		cursor = strings.ReplaceAll(cursor, " ", "+")
+	}
 
 	// The limit can be adjusted (min 1, max 100, default 50).
 	params := map[string]interface{}{
-		"feed":  feedAtURI,
-		"limit": limit,
+		"feed":   feedAtURI,
+		"limit":  limit,
+		"cursor": cursor,
 	}
 
-	if cursor != "" {
-		params["cursor"] = cursor
-	}
-
-	log.Printf("Fetching feed with params: %+v", params)
+	log.Printf("Fetching feed with cursor ", params["cursor"])
 
 	var out types.FeedResponse // Using the structured response schema
 
