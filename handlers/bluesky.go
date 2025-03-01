@@ -33,8 +33,16 @@ func FetchBlueskyHandler(c *gin.Context) {
 		UserAgent: nil,                           // can set a custom agent
 	}
 
-	// This is the fire URI
+	// Interchange these for testing
+
+	// fire: https://bsky.app/profile/did:plc:qiknc4t5rq7yngvz7g4aezq7/feed/aaaejsyozb6iq
 	feedAtURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejsyozb6iq"
+
+	// earthquake: https://bsky.app/profile/did:plc:qiknc4t5rq7yngvz7g4aezq7/feed/aaaejxlobe474
+	// feedAtURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejxlobe474"
+
+	// hurricane: https://bsky.app/profile/faineg.bsky.social/feed/aaaejwgffwqky
+	// feedAtURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejwgffwqky"
 
 	// Read query parameters
 	limit := c.DefaultQuery("limit", "10") // Default to 10 if not specified
@@ -50,8 +58,6 @@ func FetchBlueskyHandler(c *gin.Context) {
 		"limit":  limit,
 		"cursor": cursor,
 	}
-
-	log.Printf("Fetching feed with cursor ", params["cursor"])
 
 	var out types.FeedResponse // Using the structured response schema
 

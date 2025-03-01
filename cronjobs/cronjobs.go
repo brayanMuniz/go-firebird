@@ -4,21 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/robfig/cron/v3"
 	"go-firebird/types"
 	"log"
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/bluesky-social/indigo/xrpc"
-	"github.com/robfig/cron/v3"
 )
-
-// Example output
-// 2025/02/24 08:47:00 Function 3 running every 5 minutes, 2 minutes apart
-// 2025/02/24 08:50:00 Function 1 running every 5 minutes
-// 2025/02/24 08:51:00 Function 2 running every 5 minutes, 1 minute apart
-// 2025/02/24 08:52:00 Function 3 running every 5 minutes, 2 minutes apart
 
 // NOTE: This will later be changed to send to the model, but for testing this works
 
@@ -54,9 +47,8 @@ func sendToClient(data types.FeedResponse) {
 
 // FetchBlueskyHandler fetches a hydrated feed using the Bluesky API.
 type FeedCallParameters struct {
-	uri    string
-	limit  int
-	cursor string
+	uri   string
+	limit int
 }
 
 const (
@@ -71,24 +63,18 @@ func callFeed(p FeedCallParameters) {
 		UserAgent: nil,                           // can set a custom agent
 	}
 
-	// This is the fire URI
 	feedAtURI := p.uri
 
 	// Read query parameters
 	limit := 10
 	if p.limit != 0 {
 		limit = p.limit
-
 	}
 
 	// The limit can be adjusted (min 1, max 100, default 50).
 	params := map[string]interface{}{
 		"feed":  feedAtURI,
 		"limit": limit,
-	}
-
-	if p.cursor != "" {
-		params["cursor"] = p.cursor
 	}
 
 	log.Printf("Fetching feed with params: %+v", params)
@@ -107,37 +93,39 @@ func callFeed(p FeedCallParameters) {
 	sendToClient(out)
 }
 
-// NOTE: If you want to change it to run every hour:
-//
-//	_, err := c.AddFunc("0 * * * *", func() {
 func InitCronJobs() {
 	log.Println("Starting Cron Jobs")
 	c := cron.New()
 
-	// Function 1: Run every 5 minutes at 0 minutes
-	_, err := c.AddFunc("/5 * * * *", func() {
-		log.Println("Function 1 running every 5 minutes")
-		feedAtURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejsyozb6iq"
-		callFeed(FeedCallParameters{uri: feedAtURI, limit: 10, cursor: ""})
+	// Fire Feed: Run every 10 minutes at 0 minutes
+	_, err := c.AddFunc("*/10 * * * *", func() {
+		log.Println("CronJob: Fire Feed Running ============")
+		fireURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejsyozb6iq"
+		callFeed(FeedCallParameters{uri: fireURI, limit: 10})
 	})
 	if err != nil {
-		log.Println("Error scheduling Function 1:", err)
+		log.Println("Error scheduling Fire Feed", err)
 	}
 
-	// Function 2: Run every 5 minutes at 1 minute mark
-	_, err = c.AddFunc("1-59/5 * * * *", func() {
-		log.Println("Function 2 running every 5 minutes, 1 minute apart")
+	// Earthquake Feed: Run every 10 minutes at 2 minute mark
+	_, err = c.AddFunc("2-59/10 * * * *", func() {
+		log.Println("CronJob: EarthQuake Feed Running ========")
+		earthQuakeURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejxlobe474"
+		callFeed(FeedCallParameters{uri: earthQuakeURI, limit: 10})
+
 	})
 	if err != nil {
-		log.Println("Error scheduling Function 2:", err)
+		log.Println("Error scheduling EarthQuake Feed:", err)
 	}
 
-	// Function 3: Run every 5 minutes at 2 minutes mark
-	_, err = c.AddFunc("2-59/5 * * * *", func() {
-		log.Println("Function 3 running every 5 minutes, 2 minutes apart")
+	// Hurricane Feed: Run every 10 minutes at 4 minutes mark
+	_, err = c.AddFunc("4-59/10 * * * *", func() {
+		log.Println("CronJob: Hurricane Feed Running =========")
+		hurricaneURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejwgffwqky"
+		callFeed(FeedCallParameters{uri: hurricaneURI, limit: 10})
 	})
 	if err != nil {
-		log.Println("Error scheduling Function 3:", err)
+		log.Println("Error scheduling Hurricane Feed:", err)
 	}
 
 	c.Start()
