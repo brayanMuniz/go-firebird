@@ -1,17 +1,19 @@
 package main
 
 import (
-	"cloud.google.com/go/firestore"
 	"context"
-	firebase "firebase.google.com/go"
+	"encoding/base64"
 	"fmt"
-	"github.com/joho/godotenv"
 	"go-firebird/cronjobs"
 	"go-firebird/routes"
-	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 	"log"
 	"os"
+
+	"cloud.google.com/go/firestore"
+	firebase "firebase.google.com/go"
+	"github.com/joho/godotenv"
+	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 )
 
 // Structure to represent your skeet data
@@ -109,11 +111,13 @@ func main() {
 	clientURL := os.Getenv("CLIENT_URL")
 	fmt.Println("CLIENT_URL: ", clientURL)
 
-	// Initialize cron jobs
-	cronjobs.InitCronJobs()
-
+	encodedCreds := os.Getenv("FIREBASE_CREDENTIALS")
+	creds, err := base64.StdEncoding.DecodeString(encodedCreds)
+	if err != nil {
+		log.Fatalf("Failed to decode Firestore credentials: %v", err)
+	}
 	// firebase
-	opt := option.WithCredentialsFile("./firebird-firebase.json")
+	opt := option.WithCredentialsJSON(creds)
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		fmt.Errorf("error initializing app: %v", err)
@@ -125,6 +129,12 @@ func main() {
 		log.Fatalf("error getting firestore client: %v", err)
 	}
 	defer client.Close()
+
+	// for testing
+	readSkeets(client)
+
+	// Initialize cron jobs
+	cronjobs.InitCronJobs()
 
 	r := routes.SetupRouter()
 	if err := r.Run(":8080"); err != nil {
