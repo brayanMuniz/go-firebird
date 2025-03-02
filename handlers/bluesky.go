@@ -1,31 +1,25 @@
 package handlers
 
 import (
+	"cloud.google.com/go/firestore"
 	"context"
+	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/gin-gonic/gin"
+	"go-firebird/db"
 	"go-firebird/types"
 	"log"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/bluesky-social/indigo/xrpc"
-	"github.com/gin-gonic/gin"
 )
 
 // documentation: https://github.com/bluesky-social/indigo/blob/2503553ea604ea7f0bfa6a021b284b371ac2ac96/xrpc/xrpc.go#L114
-
-// FeedResponse represents the response from app.bsky.feed.getFeed.
-type FeedResponse struct {
-	Cursor string        `json:"cursor"`
-	Feed   []interface{} `json:"feed"`
-}
-
 const (
 	feedMethod = "app.bsky.feed.getFeed"
 )
 
 // FetchBlueskyHandler fetches a hydrated feed using the Bluesky API.
-func FetchBlueskyHandler(c *gin.Context) {
+func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client) {
 	// Initialize the xrpc client to use the public API endpoint.
 	client := &xrpc.Client{
 		Client:    &http.Client{Timeout: 10 * time.Second},
@@ -59,7 +53,7 @@ func FetchBlueskyHandler(c *gin.Context) {
 		"cursor": cursor,
 	}
 
-	var out types.FeedResponse // Using the structured response schema
+	var out types.FeedResponse // Using the structured response schema in types
 
 	// Call the Bluesky API using the xrpc client.
 	err := client.Do(context.Background(), xrpc.Query, "json", feedMethod, params, nil, &out)
@@ -69,6 +63,18 @@ func FetchBlueskyHandler(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Fetched feed via xrpc")
+	log.Printf("Fetched feed from /api/firebird/blusky")
+
+	// Save the first skeet from the feed into the database
+	first := out.Feed[0]
+	if first.Post.URI != "" {
+		newSkeet := db.Skeet{
+			Author:  first.Post.Author.DisplayName,
+			Content: first.Post.Record.Text,
+		}
+		db.WriteSkeet(firestoreClient, newSkeet.Author, newSkeet.Content)
+
+	}
+
 	c.JSON(http.StatusOK, out)
 }

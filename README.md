@@ -71,4 +71,3 @@ To start the server with hot-reloading:
 `air`
 
 > If you don't want to use air and want to just start coding run `go run main.go` 
-

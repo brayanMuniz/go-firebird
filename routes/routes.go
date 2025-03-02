@@ -1,11 +1,12 @@
 package routes
 
 import (
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 	"go-firebird/handlers"
 )
 
-func SetupRouter() *gin.Engine {
+func SetupRouter(firestoreClient *firestore.Client) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/", func(c *gin.Context) {
@@ -14,10 +15,14 @@ func SetupRouter() *gin.Engine {
 		})
 	})
 
+	// Inject Firestore client into handler
+	r.GET("/api/firebird/bluesky", func(c *gin.Context) {
+		handlers.FetchBlueskyHandler(c, firestoreClient)
+	})
+
 	// api routes
 	api := r.Group("/api/firebird")
 	{
-		api.GET("/bluesky", handlers.FetchBlueskyHandler)
 		api.POST("/classify", handlers.CallOpenAI)
 		api.GET("/demo", handlers.GetDemoData)
 		api.GET("/testhook", handlers.TestClientHook)
