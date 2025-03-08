@@ -16,9 +16,12 @@ func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client) 
 		})
 	})
 
-	// Inject Firestore client into handler
 	r.GET("/api/firebird/bluesky", func(c *gin.Context) {
 		handlers.FetchBlueskyHandler(c, firestoreClient, nlpClient)
+	})
+
+	r.GET("/api/testing/entity", func(c *gin.Context) {
+		handlers.TestEntity(c, nlpClient)
 	})
 
 	// api routes
