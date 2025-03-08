@@ -1,16 +1,20 @@
 package handlers
 
 import (
-	"cloud.google.com/go/firestore"
 	"context"
-	"github.com/bluesky-social/indigo/xrpc"
-	"github.com/gin-gonic/gin"
+	"fmt"
 	"go-firebird/db"
+	"go-firebird/nlp"
 	"go-firebird/types"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"cloud.google.com/go/firestore"
+	language "cloud.google.com/go/language/apiv2"
+	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/gin-gonic/gin"
 )
 
 // documentation: https://github.com/bluesky-social/indigo/blob/2503553ea604ea7f0bfa6a021b284b371ac2ac96/xrpc/xrpc.go#L114
@@ -19,8 +23,7 @@ const (
 )
 
 // FetchBlueskyHandler fetches a hydrated feed using the Bluesky API.
-func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client) {
-	// Initialize the xrpc client to use the public API endpoint.
+func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpClient *language.Client) {
 	client := &xrpc.Client{
 		Client:    &http.Client{Timeout: 10 * time.Second},
 		Host:      "https://public.api.bsky.app", // public endpoint for unauthenticated requests.
@@ -55,7 +58,7 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client) {
 
 	var out types.FeedResponse // Using the structured response schema in types
 
-	// Call the Bluesky API using the xrpc client.
+	// Call the Bluesky API
 	err := client.Do(context.Background(), xrpc.Query, "json", feedMethod, params, nil, &out)
 	if err != nil {
 		log.Printf("Error fetching feed via xrpc: %v", err)
@@ -65,14 +68,49 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client) {
 
 	log.Printf("Fetched feed from /api/firebird/blusky")
 
-	// Save the first skeet from the feed into the database
 	first := out.Feed[0]
 	if first.Post.URI != "" {
+		// Save the first skeet from the feed into the database
 		newSkeet := db.Skeet{
 			Author:  first.Post.Author.DisplayName,
 			Content: first.Post.Record.Text,
 		}
 		db.WriteSkeet(firestoreClient, newSkeet.Author, newSkeet.Content)
+
+		// Perform NLP analysis on the skeet content.
+		fmt.Println(newSkeet.Content)
+		nlpEntities, err := nlp.AnalyzeEntities(nlpClient, newSkeet.Content)
+		if err != nil {
+			log.Printf("Error analyzing entities: %v", err)
+		} else {
+			// Loop over NLP entities
+			for _, entity := range nlpEntities {
+				fmt.Printf("Entity Name: %s, Type: %s\n", entity.Name, entity.Type)
+				if entity.Type == "LOCATION" {
+					// Save the location metadata and associate the skeet in a nested subcollection.
+					err := db.SaveLocationEntity(firestoreClient, entity.Name, first.Post.URI, entity)
+					if err != nil {
+						log.Printf("Error saving location entity for %s: %v", entity.Name, err)
+					} else {
+						fmt.Printf("Saved location '%s' with skeet ID '%s'\n", entity.Name, first.Post.URI)
+					}
+				}
+				//  Print additional details about the entity.
+				if len(entity.Metadata) > 0 {
+					fmt.Println("  Metadata:")
+					for k, v := range entity.Metadata {
+						fmt.Printf("    %s: %s\n", k, v)
+					}
+				}
+				if len(entity.Mentions) > 0 {
+					fmt.Println("  Mentions:")
+					for _, m := range entity.Mentions {
+						fmt.Printf("    Content: %s, BeginOffset: %d, Probability: %.3f\n", m.Content, m.BeginOffset, m.Probability)
+					}
+				}
+				fmt.Println("")
+			}
+		}
 
 	}
 
