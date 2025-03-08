@@ -68,8 +68,12 @@ func CloseFirestore() {
 
 // Skeet represents a post stored in Firestore
 type Skeet struct {
-	Author  string `firestore:"author"`
-	Content string `firestore:"content"`
+	Author      string    `firestore:"author"`
+	Content     string    `firestore:"content"`
+	Timestamp   time.Time `firestore:"timestamp"` // or firestore.ServerTimestamp
+	Handle      string    `firestore:"handle"`
+	DisplayName string    `firestore:"displayName"`
+	UID         string    `firestore:"uid"`
 }
 
 // ReadSkeets retrieves and prints all skeets from Firestore.
@@ -95,24 +99,21 @@ func ReadSkeets(client *firestore.Client) {
 }
 
 // WriteSkeet adds a new skeet to Firestore.
-func WriteSkeet(client *firestore.Client, author, content string) {
+func WriteSkeet(client *firestore.Client, newSkeet Skeet) {
 	ctx := context.Background()
-	newSkeet := &Skeet{
-		Author:  author,
-		Content: content,
-	}
-
-	ref, _, err := client.Collection("skeets").Add(ctx, newSkeet) // Auto-generate ID
+	hashedSkeetID := hashString(newSkeet.UID)
+	_, err := client.Collection("skeets").Doc(hashedSkeetID).Set(ctx, newSkeet)
 	if err != nil {
 		log.Fatalf("Error adding document: %v", err)
 	}
-	fmt.Printf("Added document with ID: %s\n", ref.ID)
+	fmt.Printf("Added document with hashed ID: %s\n", hashedSkeetID)
 }
 
 // DeleteSkeet removes a skeet from Firestore using its document ID.
 func DeleteSkeet(client *firestore.Client, skeetID string) (*firestore.WriteResult, error) {
 	ctx := context.Background()
-	docRef := client.Collection("skeets").Doc(skeetID)
+	hashedSkeetID := hashString(skeetID)
+	docRef := client.Collection("skeets").Doc(hashedSkeetID)
 	writeResult, err := docRef.Delete(ctx)
 
 	if err != nil {
@@ -120,16 +121,18 @@ func DeleteSkeet(client *firestore.Client, skeetID string) (*firestore.WriteResu
 		return nil, err
 	}
 
-	fmt.Printf("Skeet with ID '%s' deleted successfully.\n", skeetID)
+	fmt.Printf("Skeet with hashed ID '%s' deleted successfully.\n", hashedSkeetID)
 	return writeResult, nil
 }
 
 // UpdateSkeetContent updates the content of a skeet in Firestore.
 func UpdateSkeetContent(client *firestore.Client, skeetID, newContent string) (*firestore.WriteResult, error) {
 	ctx := context.Background()
-	docRef := client.Collection("skeets").Doc(skeetID)
+
+	hashedSkeetID := hashString(skeetID)
+	docRef := client.Collection("skeets").Doc(hashedSkeetID)
 	updates := []firestore.Update{
-		{Path: "content", Value: newContent}, // Update content field
+		{Path: "content", Value: newContent},
 	}
 
 	// Perform the update
@@ -138,14 +141,14 @@ func UpdateSkeetContent(client *firestore.Client, skeetID, newContent string) (*
 		return nil, fmt.Errorf("error updating document: %w", err)
 	}
 
-	fmt.Printf("Skeet with ID '%s' updated successfully.\n", skeetID)
+	fmt.Printf("Skeet with ID '%s' updated successfully.\n", hashedSkeetID)
 	return res, nil
 }
 
 // SaveLocationEntity saves or updates a location entity in Firestore using a nested structure.
 // The root document in "locations" uses a hashed location name as its ID and stores the location metadata.
 // Under that, the subcollection "skeetIds" will have a document with a hashed skeet ID, storing the entity data.
-func SaveLocationEntity(client *firestore.Client, locationName, skeetID string, entityData nlp.Entity) error {
+func SaveLocationEntity(client *firestore.Client, locationName, skeetID string, entityData nlp.Entity, skeet Skeet) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -154,8 +157,8 @@ func SaveLocationEntity(client *firestore.Client, locationName, skeetID string, 
 	hashedSkeetID := hashString(skeetID)
 
 	locationMetadata := map[string]interface{}{
-		"name": entityData.Name,
-		"type": entityData.Type,
+		"locationName": entityData.Name,
+		"type":         entityData.Type,
 	}
 
 	// Update the root document for location metadata.
@@ -167,11 +170,10 @@ func SaveLocationEntity(client *firestore.Client, locationName, skeetID string, 
 
 	// Prepare data for the skeet document.
 	subData := map[string]interface{}{
-		"skeetID":   skeetID,
-		"Mentions":  entityData.Mentions,
-		"Name":      entityData.Name,
-		"Type":      entityData.Type,
-		"timestamp": firestore.ServerTimestamp,
+		"mentions":     entityData.Mentions,
+		"locationName": entityData.Name,
+		"type":         entityData.Type,
+		"skeetData":    skeet,
 	}
 
 	// Save or update the skeet document under the location's subcollection.

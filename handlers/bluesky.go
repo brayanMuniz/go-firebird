@@ -70,12 +70,24 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 
 	first := out.Feed[0]
 	if first.Post.URI != "" {
+		// Parse the createdAt string into a time.Time
+		parsedTime, err := time.Parse(time.RFC3339, first.Post.Record.CreatedAt)
+		if err != nil {
+			log.Printf("Failed to parse createdAt: %v", err)
+			parsedTime = time.Now() // fallback to current time if parsing fails
+		}
+
 		// Save the first skeet from the feed into the database
 		newSkeet := db.Skeet{
-			Author:  first.Post.Author.DisplayName,
-			Content: first.Post.Record.Text,
+			Author:      first.Post.Author.DisplayName,
+			Content:     first.Post.Record.Text,
+			Handle:      first.Post.Author.Handle,
+			DisplayName: first.Post.Author.DisplayName,
+			UID:         first.Post.URI,
+			Timestamp:   parsedTime,
 		}
-		db.WriteSkeet(firestoreClient, newSkeet.Author, newSkeet.Content)
+
+		db.WriteSkeet(firestoreClient, newSkeet)
 
 		// Perform NLP analysis on the skeet content.
 		fmt.Println(newSkeet.Content)
@@ -88,7 +100,7 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 				fmt.Printf("Entity Name: %s, Type: %s\n", entity.Name, entity.Type)
 				if entity.Type == "LOCATION" || entity.Type == "ADDRESS" {
 					// Save the location metadata and associate the skeet in a nested subcollection.
-					err := db.SaveLocationEntity(firestoreClient, entity.Name, first.Post.URI, entity)
+					err := db.SaveLocationEntity(firestoreClient, entity.Name, first.Post.URI, entity, newSkeet)
 					if err != nil {
 						log.Printf("Error saving location entity for %s: %v", entity.Name, err)
 					} else {
