@@ -28,5 +28,7 @@ Thumbs.db
 # binary 
 go-firebird
 
+notes.md
 firebird-3fc8c-firebase-adminsdk-fbsvc-3e5faf385c.json
 firebird-firebase.json
+sentiment-keys.json
