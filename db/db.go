@@ -149,18 +149,16 @@ func SaveLocationEntity(client *firestore.Client, locationName, skeetID string, 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Hash the location name and skeet ID to produce well-formed document IDs.
+	// Hash the location name and skeet ID to not have to deal with ill formed document names
 	hashedLocationID := hashString(locationName)
 	hashedSkeetID := hashString(skeetID)
 
-	// Wrap entityData in a map to satisfy MergeAll's requirement.
 	locationMetadata := map[string]interface{}{
 		"name": entityData.Name,
 		"type": entityData.Type,
 	}
 
 	// Update the root document for location metadata.
-	// You might store additional metadata fields here if needed.
 	_, err := client.Collection("locations").Doc(hashedLocationID).Set(ctx, locationMetadata, firestore.MergeAll)
 	if err != nil {
 		log.Printf("Failed to save location metadata for '%s' (hashed: %s): %v", locationName, hashedLocationID, err)
@@ -169,7 +167,10 @@ func SaveLocationEntity(client *firestore.Client, locationName, skeetID string, 
 
 	// Prepare data for the skeet document.
 	subData := map[string]interface{}{
-		"entity":    entityData,
+		"skeetID":   skeetID,
+		"Mentions":  entityData.Mentions,
+		"Name":      entityData.Name,
+		"Type":      entityData.Type,
 		"timestamp": firestore.ServerTimestamp,
 	}
 
