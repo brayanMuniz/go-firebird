@@ -10,12 +10,50 @@ import (
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/gin-gonic/gin"
 
-	language "cloud.google.com/go/language/apiv2"
 	"go-firebird/nlp"
 	"go-firebird/types"
+
+	language "cloud.google.com/go/language/apiv2"
 )
 
 func TestEntity(c *gin.Context, nlpClient *language.Client) {
+	mockParam := c.Query("mock")
+
+	// JSON response struct
+	type SkeetEntityResponse struct {
+		Author   string       `json:"author"`
+		Content  string       `json:"content"`
+		Entities []nlp.Entity `json:"entities"`
+	}
+
+	// If mockParam == "t", use mock data instead of fetching from Bluesky.
+	if mockParam == "t" {
+		mockAuthor := "Mock Tester"
+		mockContent := "Please deliver all mail to 1234 Elm Street, Springfield, USA. The White House is located at 1600 Pennsylvania Avenue NW, Washington, D.C. 20500."
+
+		responseData := SkeetEntityResponse{
+			Author:  mockAuthor,
+			Content: mockContent,
+		}
+
+		// Analyze entities using the mock text.
+		entities, err := nlp.AnalyzeEntities(nlpClient, mockContent)
+		if err != nil {
+			log.Printf("Error analyzing entities (mock mode): %v", err)
+			c.JSON(http.StatusOK, gin.H{
+				"author":  responseData.Author,
+				"content": responseData.Content,
+				"error":   "Failed to analyze entities in mock mode",
+			})
+			return
+		}
+		responseData.Entities = entities
+
+		// Return JSON response with mock data and entities.
+		c.JSON(http.StatusOK, responseData)
+		return
+	}
+
 	client := &xrpc.Client{
 		Client:    &http.Client{Timeout: 10 * time.Second},
 		Host:      "https://public.api.bsky.app",
@@ -61,14 +99,6 @@ func TestEntity(c *gin.Context, nlpClient *language.Client) {
 		c.JSON(http.StatusOK, gin.H{"message": "First feed item has no valid URI"})
 		return
 	}
-
-	// JSON response struct
-	type SkeetEntityResponse struct {
-		Author   string       `json:"author"`
-		Content  string       `json:"content"`
-		Entities []nlp.Entity `json:"entities"`
-	}
-
 	responseData := SkeetEntityResponse{
 		Author:  first.Post.Author.DisplayName,
 		Content: first.Post.Record.Text,

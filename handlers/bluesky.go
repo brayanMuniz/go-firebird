@@ -86,7 +86,7 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 			// Loop over NLP entities
 			for _, entity := range nlpEntities {
 				fmt.Printf("Entity Name: %s, Type: %s\n", entity.Name, entity.Type)
-				if entity.Type == "LOCATION" {
+				if entity.Type == "LOCATION" || entity.Type == "ADDRESS" {
 					// Save the location metadata and associate the skeet in a nested subcollection.
 					err := db.SaveLocationEntity(firestoreClient, entity.Name, first.Post.URI, entity)
 					if err != nil {
