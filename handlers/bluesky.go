@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"go-firebird/db"
+	"go-firebird/mlmodel"
 	"go-firebird/nlp"
 	"go-firebird/types"
 	"log"
@@ -79,7 +79,7 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 
 		// Save the first skeet from the feed into the database
 		newSkeet := db.Skeet{
-			Author:      first.Post.Author.DisplayName,
+			Avatar:      first.Post.Author.Avatar,
 			Content:     first.Post.Record.Text,
 			Handle:      first.Post.Author.Handle,
 			DisplayName: first.Post.Author.DisplayName,
@@ -87,43 +87,36 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 			Timestamp:   parsedTime,
 		}
 
-		db.WriteSkeet(firestoreClient, newSkeet)
+		// NOTE: since I am only calling it on one I have to wrap it
+		mlInputs := mlmodel.MLRequest{
+			newSkeet.UID: newSkeet.Content,
+		}
 
-		// Perform NLP analysis on the skeet content.
-		fmt.Println(newSkeet.Content)
+		// Call ML model to get classification results.
+		mlResp, err := mlmodel.CallModel(mlInputs)
+		if err != nil {
+			// TODO: return a proper error
+			log.Printf("Error calling ML model: %v", err)
+			return
+		}
+
+		// Get classification array for this skeet.
+		classification := mlResp[newSkeet.UID]
+
+		// Perform entity extraction.
 		nlpEntities, err := nlp.AnalyzeEntities(nlpClient, newSkeet.Content)
 		if err != nil {
 			log.Printf("Error analyzing entities: %v", err)
-		} else {
-			// Loop over NLP entities
-			for _, entity := range nlpEntities {
-				fmt.Printf("Entity Name: %s, Type: %s\n", entity.Name, entity.Type)
-				if entity.Type == "LOCATION" || entity.Type == "ADDRESS" {
-					// Save the location metadata and associate the skeet in a nested subcollection.
-					err := db.SaveLocationEntity(firestoreClient, entity.Name, first.Post.URI, entity, newSkeet)
-					if err != nil {
-						log.Printf("Error saving location entity for %s: %v", entity.Name, err)
-					} else {
-						fmt.Printf("Saved location '%s' with skeet ID '%s'\n", entity.Name, first.Post.URI)
-					}
-				}
-				//  Print additional details about the entity.
-				if len(entity.Metadata) > 0 {
-					fmt.Println("  Metadata:")
-					for k, v := range entity.Metadata {
-						fmt.Printf("    %s: %s\n", k, v)
-					}
-				}
-				if len(entity.Mentions) > 0 {
-					fmt.Println("  Mentions:")
-					for _, m := range entity.Mentions {
-						fmt.Printf("    Content: %s, BeginOffset: %d, Probability: %.3f\n", m.Content, m.BeginOffset, m.Probability)
-					}
-				}
-				fmt.Println("")
-			}
 		}
 
+		// Now call our new function to save everything in one transaction.
+		err = db.SaveCompleteSkeet(firestoreClient, newSkeet, classification, nlpEntities)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update database"})
+			return
+		}
+
+		c.JSON(http.StatusOK, out)
 	}
 
 	c.JSON(http.StatusOK, out)
