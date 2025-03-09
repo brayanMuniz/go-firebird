@@ -24,6 +24,10 @@ func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client) 
 		handlers.TestEntity(c, nlpClient)
 	})
 
+	r.GET("/api/testing/classification", func(c *gin.Context) {
+		handlers.ClassifyLiveTest(c)
+	})
+
 	// api routes
 	api := r.Group("/api/firebird")
 	{
