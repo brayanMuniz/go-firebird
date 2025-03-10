@@ -70,12 +70,6 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 
 	first := out.Feed[0]
 	if first.Post.URI != "" {
-		// Parse the createdAt string into a time.Time
-		parsedTime, err := time.Parse(time.RFC3339, first.Post.Record.CreatedAt)
-		if err != nil {
-			log.Printf("Failed to parse createdAt: %v", err)
-			parsedTime = time.Now() // fallback to current time if parsing fails
-		}
 
 		// Save the first skeet from the feed into the database
 		newSkeet := db.Skeet{
@@ -84,7 +78,7 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 			Handle:      first.Post.Author.Handle,
 			DisplayName: first.Post.Author.DisplayName,
 			UID:         first.Post.URI,
-			Timestamp:   parsedTime,
+			Timestamp:   first.Post.Record.CreatedAt,
 		}
 
 		// NOTE: since I am only calling it on one I have to wrap it

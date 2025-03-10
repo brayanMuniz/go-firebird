@@ -10,7 +10,6 @@ import (
 	"log"
 	"os"
 	"sync"
-	"time"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -68,12 +67,12 @@ func CloseFirestore() {
 
 // Skeet represents a post stored in Firestore
 type Skeet struct {
-	Avatar      string    `firestore:"avatar"`
-	Content     string    `firestore:"content"`
-	Timestamp   time.Time `firestore:"timestamp"`
-	Handle      string    `firestore:"handle"`
-	DisplayName string    `firestore:"displayName"`
-	UID         string    `firestore:"uid"`
+	Avatar      string `firestore:"avatar"`
+	Content     string `firestore:"content"`
+	Timestamp   string `firestore:"timestamp"`
+	Handle      string `firestore:"handle"`
+	DisplayName string `firestore:"displayName"`
+	UID         string `firestore:"uid"`
 }
 
 // SaveCompleteSkeet writes the main skeet document (with ML classification appended)
