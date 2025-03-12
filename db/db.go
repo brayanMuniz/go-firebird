@@ -75,15 +75,20 @@ type Skeet struct {
 	UID         string `firestore:"uid"`
 }
 
-// SaveCompleteSkeet writes the main skeet document (with ML classification appended)
-// and for each LOCATION/ADDRESS entity it updates the location document and its nested subcollection.
-// This is done atomically within a Firestore transaction.
-func SaveCompleteSkeet(client *firestore.Client, newSkeet Skeet, classification []float64, entities []nlp.Entity) error {
+// This was made out of necessity because of how long the parameters would have been lol
+type SaveCompleteSkeetType struct {
+	NewSkeet       Skeet
+	Classification []float64
+	Entities       []nlp.Entity
+	Sentiment      nlp.Sentiment
+}
+
+func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) error {
 	ctx := context.Background()
 
 	// Build arrays for ADDRESS and LOCATION entities.
 	var addresses, locations []nlp.Entity
-	for _, entity := range entities {
+	for _, entity := range data.Entities {
 		if entity.Type == "ADDRESS" {
 			addresses = append(addresses, entity)
 		} else if entity.Type == "LOCATION" {
@@ -93,19 +98,20 @@ func SaveCompleteSkeet(client *firestore.Client, newSkeet Skeet, classification 
 
 	// Prepare main skeet data.
 	skeetData := map[string]interface{}{
-		"avatar":          newSkeet.Avatar,
-		"content":         newSkeet.Content,
-		"timestamp":       newSkeet.Timestamp,
-		"handle":          newSkeet.Handle,
-		"displayName":     newSkeet.DisplayName,
-		"uid":             newSkeet.UID,
-		"classification":  classification,
+		"avatar":          data.NewSkeet.Avatar,
+		"content":         data.NewSkeet.Content,
+		"timestamp":       data.NewSkeet.Timestamp,
+		"handle":          data.NewSkeet.Handle,
+		"displayName":     data.NewSkeet.DisplayName,
+		"uid":             data.NewSkeet.UID,
+		"classification":  data.Classification,
 		"entity_ADDRESS":  addresses,
 		"entity_LOCATION": locations,
+		"sentiment":       data.Sentiment,
 	}
 
 	// Compute the hashed skeet ID.
-	hashedSkeetID := HashString(newSkeet.UID)
+	hashedSkeetID := HashString(data.NewSkeet.UID)
 
 	fmt.Println("Running transaction for: ", hashedSkeetID)
 
@@ -119,7 +125,7 @@ func SaveCompleteSkeet(client *firestore.Client, newSkeet Skeet, classification 
 		}
 
 		// For each entity of type LOCATION or ADDRESS, update its location doc and nested subcollection.
-		for _, entity := range entities {
+		for _, entity := range data.Entities {
 			if entity.Type == "LOCATION" || entity.Type == "ADDRESS" {
 				hashedLocationID := HashString(entity.Name)
 				locationMetadata := map[string]interface{}{

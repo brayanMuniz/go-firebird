@@ -89,7 +89,6 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 		// Call ML model to get classification results.
 		mlResp, err := mlmodel.CallModel(mlInputs)
 		if err != nil {
-			// TODO: return a proper error
 			log.Printf("Error calling ML model: %v", err)
 			return
 		}
@@ -103,8 +102,20 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 			log.Printf("Error analyzing entities: %v", err)
 		}
 
+		sentiment, err := nlp.AnalyzeSentiment(nlpClient, newSkeet.Content)
+		if err != nil {
+			log.Printf("Error analyzing sentiment: %v", err)
+		}
+
+		data := db.SaveCompleteSkeetType{
+			NewSkeet:       newSkeet,
+			Classification: classification,
+			Entities:       nlpEntities,
+			Sentiment:      sentiment,
+		}
+
 		// Now call our new function to save everything in one transaction.
-		err = db.SaveCompleteSkeet(firestoreClient, newSkeet, classification, nlpEntities)
+		err = db.SaveCompleteSkeet(firestoreClient, data)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update database"})
 			return
