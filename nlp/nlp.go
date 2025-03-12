@@ -18,6 +18,12 @@ var (
 	clientOnce     sync.Once
 )
 
+// Sentiment
+type Sentiment struct {
+	Magnitude float32 `json:"magnitude"`
+	Score     float32 `json:"score"`
+}
+
 // Entity represents a named entity detected in the text.
 type Entity struct {
 	Name     string            `json:"name"`
@@ -33,8 +39,32 @@ type EntityMention struct {
 	Probability float32 `json:"probability"`
 }
 
-// AnalyzeEntities sends text to the Cloud Natural Language API to extract named entities
-// and returns a slice of Entity structs along with any error encountered.
+func AnalyzeSentiment(client *language.Client, text string) (Sentiment, error) {
+	var sentiment Sentiment
+	ctx := context.Background()
+	req := &languagepb.AnalyzeSentimentRequest{
+		Document: &languagepb.Document{
+			Source: &languagepb.Document_Content{
+				Content: text,
+			},
+			Type: languagepb.Document_PLAIN_TEXT,
+		},
+		EncodingType: languagepb.EncodingType_UTF8,
+	}
+
+	resp, err := client.AnalyzeSentiment(ctx, req)
+	if err != nil {
+		return sentiment, fmt.Errorf("AnalyzeEntities Requesterror: %w", err)
+	}
+
+	sentiment.Score = resp.DocumentSentiment.Score
+	sentiment.Magnitude = resp.DocumentSentiment.Magnitude
+
+	return sentiment, nil
+}
+
+// sends text to the Cloud Natural Language API to extract named entities
+// and returns a slice of Entity structs along with any error encountered
 func AnalyzeEntities(client *language.Client, text string) ([]Entity, error) {
 	ctx := context.Background()
 	req := &languagepb.AnalyzeEntitiesRequest{

@@ -20,8 +20,13 @@ func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client) 
 		handlers.FetchBlueskyHandler(c, firestoreClient, nlpClient)
 	})
 
+	// Testing routes
 	r.GET("/api/testing/entity", func(c *gin.Context) {
 		handlers.TestEntity(c, nlpClient)
+	})
+
+	r.GET("/api/testing/sentiment", func(c *gin.Context) {
+		handlers.TestSentiment(c, nlpClient)
 	})
 
 	r.GET("/api/testing/classification", func(c *gin.Context) {
