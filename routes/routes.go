@@ -5,9 +5,10 @@ import (
 	language "cloud.google.com/go/language/apiv2"
 	"github.com/gin-gonic/gin"
 	"go-firebird/handlers"
+	"googlemaps.github.io/maps"
 )
 
-func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client) *gin.Engine {
+func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client, geocodeClient *maps.Client) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/", func(c *gin.Context) {
@@ -31,6 +32,10 @@ func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client) 
 
 	r.GET("/api/testing/classification", func(c *gin.Context) {
 		handlers.ClassifyLiveTest(c)
+	})
+
+	r.GET("/api/testing/geocoding", func(c *gin.Context) {
+		handlers.TestGeocode(c)
 	})
 
 	// api routes
