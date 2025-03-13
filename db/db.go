@@ -1,20 +1,22 @@
 package db
 
 import (
+	"cloud.google.com/go/firestore"
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	firebase "firebase.google.com/go"
 	"fmt"
+	"go-firebird/geocode"
 	"go-firebird/nlp"
+	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"log"
 	"os"
 	"sync"
-
-	"cloud.google.com/go/firestore"
-	firebase "firebase.google.com/go"
-	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 )
 
 // hashString hashes a given string using SHA-256 and returns its hex representation.
@@ -83,6 +85,21 @@ type SaveCompleteSkeetType struct {
 	Sentiment      nlp.Sentiment
 }
 
+type LocationData struct {
+	LocationName     string  `firestore:"locationName"`
+	FormattedAddress string  `firestore:"formattedAddress"`
+	Lat              float64 `firestore:"lat"`
+	Long             float64 `firestore:"long"`
+	Type             string  `firestore:"type"`
+}
+
+type NewLocationMetaData struct {
+	LocationName string
+	Type         string
+	NewLocation  bool
+}
+
+// I DID IT! I DID IT! I DID IT! I DID IT! LETS GOOOOOOOOOOOO!
 func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) error {
 	ctx := context.Background()
 
@@ -110,13 +127,42 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) err
 		"sentiment":       data.Sentiment,
 	}
 
-	// Compute the hashed skeet ID.
 	hashedSkeetID := HashString(data.NewSkeet.UID)
 
-	fmt.Println("Running transaction for: ", hashedSkeetID)
+	fmt.Printf("\nRunning transaction for: %s, hashed: %s\n", data.NewSkeet.UID, hashedSkeetID)
 
 	// Run a transaction to perform all writes atomically.
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		newLocationsData := []NewLocationMetaData{}
+
+		// For each entity of type LOCATION or ADDRESS, check if its new and add it to newLocationsData
+		for _, entity := range data.Entities {
+			if entity.Type == "LOCATION" || entity.Type == "ADDRESS" {
+
+				// Retrieve the current value of "newLocation"
+				hashedLocationID := HashString(entity.Name)
+				locationDocRef := client.Collection("locations").Doc(hashedLocationID)
+				_, err := tx.Get(locationDocRef)
+				if err != nil {
+
+					if status.Code(err) == codes.NotFound {
+						// If the document doesn't exist, create it and set newLocation to true.
+
+						newLocationsData = append(newLocationsData, NewLocationMetaData{
+							LocationName: entity.Name,
+							Type:         entity.Type,
+							NewLocation:  true,
+						})
+
+					} else {
+						return fmt.Errorf("error getting location doc for %s: %w", entity.Name, err)
+					}
+
+				}
+
+			}
+
+		}
 
 		// Set the main skeet document.
 		skeetDocRef := client.Collection("skeets").Doc(hashedSkeetID)
@@ -124,20 +170,32 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) err
 			return fmt.Errorf("failed to set skeet document: %w", err)
 		}
 
-		// For each entity of type LOCATION or ADDRESS, update its location doc and nested subcollection.
+		// create the new location docs
+		for _, value := range newLocationsData {
+			hashedLocationID := HashString(value.LocationName)
+			locationDocRef := client.Collection("locations").Doc(hashedLocationID)
+
+			// Convert struct to map.
+			locationDataMap := map[string]interface{}{
+				"locationName": value.LocationName,
+				"type":         value.Type,
+				"newLocation":  value.NewLocation,
+			}
+
+			if err := tx.Set(locationDocRef, locationDataMap, firestore.MergeAll); err != nil {
+				return fmt.Errorf("failed to set location doc for %s: %w", value.LocationName, err)
+			}
+
+		}
+
+		// loop over again and set all the skeet data
 		for _, entity := range data.Entities {
 			if entity.Type == "LOCATION" || entity.Type == "ADDRESS" {
-				hashedLocationID := HashString(entity.Name)
-				locationMetadata := map[string]interface{}{
-					"locationName": entity.Name,
-					"type":         entity.Type,
-				}
-				locationDocRef := client.Collection("locations").Doc(hashedLocationID)
-				if err := tx.Set(locationDocRef, locationMetadata, firestore.MergeAll); err != nil {
-					return fmt.Errorf("failed to set location doc for %s: %w", entity.Name, err)
-				}
 
-				// In the subcollection "skeetIds", store the skeet data with entity details.
+				hashedLocationID := HashString(entity.Name)
+				locationDocRef := client.Collection("locations").Doc(hashedLocationID)
+
+				// In the subcollection location/locId/skeetIds, store the skeet data with entity details.
 				subDocRef := locationDocRef.Collection("skeetIds").Doc(hashedSkeetID)
 				subData := map[string]interface{}{
 					"mentions":     entity.Mentions,
@@ -150,6 +208,7 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) err
 				}
 			}
 		}
+
 		return nil
 	})
 
@@ -158,8 +217,77 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) err
 		return err
 	}
 
-	fmt.Printf("Successfully saved complete skeet with hashed ID: %s\n", hashedSkeetID)
+	fmt.Printf("\nSuccessfully saved complete skeet with hashed ID: %s\n", hashedSkeetID)
 	return nil
+}
+
+func GetNewLocations(client *firestore.Client) ([]LocationData, error) {
+	var newLocations []LocationData
+	ctx := context.Background()
+
+	// Query all documents where newlocation == true
+	docs, err := client.Collection("locations").
+		Where("newLocation", "==", true).
+		Documents(ctx).
+		GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert each doc to LocationData struct
+	for _, doc := range docs {
+		var ld LocationData
+		if err := doc.DataTo(&ld); err != nil {
+			return nil, err
+		}
+		newLocations = append(newLocations, ld)
+	}
+
+	return newLocations, nil
+}
+
+// uses newLocation flag to determine if an update is needed
+func UpdateLocationGeocoding(client *firestore.Client, locationName string) {
+	hashedLocationID := HashString(locationName)
+	results, err := geocode.GeocodeAddress(locationName)
+	if err != nil {
+		log.Printf("Failed to geocode %s: %v", locationName, err)
+		return
+	}
+
+	result := ""
+	if len(results) > 0 {
+		result = results[0].FormattedAddress
+
+	}
+	geoData := map[string]interface{}{
+		"formattedAddress": result,
+		"lat":              0,
+		"long":             0,
+		"newLocation":      false,
+	}
+
+	if len(results) == 0 {
+		log.Printf("No geocode results for %s", locationName)
+		log.Println("Setting result to null")
+	} else {
+		loc := results[0].Geometry.Location
+		geoData = map[string]interface{}{
+			"formattedAddress": results[0].FormattedAddress,
+			"lat":              loc.Lat,
+			"long":             loc.Lng,
+			"newLocation":      false,
+		}
+
+	}
+
+	ctx := context.Background()
+	_, err = client.Collection("locations").Doc(hashedLocationID).Set(ctx, geoData, firestore.MergeAll)
+	if err != nil {
+		log.Printf("\nFailed to update geocoding data for %s: %v", locationName, err)
+		return
+	}
+	log.Printf("\nSuccessfully updated geocoding data for %s", locationName)
 }
 
 // ReadSkeets retrieves and prints all skeets from Firestore.

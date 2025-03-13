@@ -1,50 +1,18 @@
 package cronjobs
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"github.com/bluesky-social/indigo/xrpc"
-	"github.com/robfig/cron/v3"
 	"go-firebird/types"
 	"log"
 	"net/http"
-	"os"
 	"time"
+
+	"cloud.google.com/go/firestore"
+	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/robfig/cron/v3"
 )
 
 // NOTE: This will later be changed to send to the model, but for testing this works
-
-// sendToClient sends the fetched feed data to the client URL specified in the environment
-func sendToClient(data types.FeedResponse) {
-	clientBaseURL := os.Getenv("CLIENT_URL")
-	if clientBaseURL == "" {
-		log.Println("CLIENT_URL is not set. Defaulting to http://localhost:3000")
-		clientBaseURL = "http://localhost:3000"
-	}
-
-	// Append the API route to the base URL
-	clientURL := clientBaseURL + "/api/testing"
-	log.Println("cronjobs client_url: ", clientURL)
-
-	// Convert the struct to JSON
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		log.Printf("Error marshaling JSON: %v", err)
-		return
-	}
-
-	// Send a POST request to the client URL
-	resp, err := http.Post(clientURL, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Printf("Error sending data to %s: %v", clientURL, err)
-		return
-	}
-	defer resp.Body.Close()
-
-	log.Printf("Sent data to %s with response: %v", clientURL, resp.Status)
-}
-
 // FetchBlueskyHandler fetches a hydrated feed using the Bluesky API.
 type FeedCallParameters struct {
 	uri   string
@@ -88,18 +56,15 @@ func callFeed(p FeedCallParameters) {
 		return
 	}
 
-	log.Printf("Feed gotten")
-	log.Printf("Sending to client")
-	sendToClient(out)
 }
 
-func InitCronJobs() {
-	log.Println("Starting Cron Jobs")
+func InitCronJobs(firestoreClient *firestore.Client) {
+	log.Println("\nStarting Cron Jobs -------------------------------------------------------")
 	c := cron.New()
 
 	// Fire Feed: Run every 10 minutes at 0 minutes
 	_, err := c.AddFunc("*/10 * * * *", func() {
-		log.Println("CronJob: Fire Feed Running ============")
+		log.Println("\nCronJob: Fire Feed Running")
 		fireURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejsyozb6iq"
 		callFeed(FeedCallParameters{uri: fireURI, limit: 10})
 	})
@@ -109,7 +74,7 @@ func InitCronJobs() {
 
 	// Earthquake Feed: Run every 10 minutes at 2 minute mark
 	_, err = c.AddFunc("2-59/10 * * * *", func() {
-		log.Println("CronJob: EarthQuake Feed Running ========")
+		log.Println("\nCronJob: EarthQuake Feed Running")
 		earthQuakeURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejxlobe474"
 		callFeed(FeedCallParameters{uri: earthQuakeURI, limit: 10})
 
@@ -120,7 +85,7 @@ func InitCronJobs() {
 
 	// Hurricane Feed: Run every 10 minutes at 4 minutes mark
 	_, err = c.AddFunc("4-59/10 * * * *", func() {
-		log.Println("CronJob: Hurricane Feed Running =========")
+		log.Println("\nCronJob: Hurricane Feed Running")
 		hurricaneURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejwgffwqky"
 		callFeed(FeedCallParameters{uri: hurricaneURI, limit: 10})
 	})

@@ -114,7 +114,7 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 			Sentiment:      sentiment,
 		}
 
-		// Now call our new function to save everything in one transaction.
+		// Save everything in one transaction
 		err = db.SaveCompleteSkeet(firestoreClient, data)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update database"})
@@ -124,5 +124,4 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 		c.JSON(http.StatusOK, out)
 	}
 
-	c.JSON(http.StatusOK, out)
 }
