@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -115,11 +116,22 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 		}
 
 		// Save everything in one transaction
-		err = db.SaveCompleteSkeet(firestoreClient, data)
+		newLocations, err := db.SaveCompleteSkeet(firestoreClient, data)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update database"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update database with new skeet"})
 			return
 		}
+
+		// Launch a goroutine for each new location geocoding update.
+		var wg sync.WaitGroup
+		for _, locationName := range newLocations {
+			wg.Add(1)
+			go func(loc string) {
+				defer wg.Done()
+				db.UpdateLocationGeocoding(firestoreClient, loc)
+			}(locationName)
+		}
+		wg.Wait() // Wait for all goroutines to finish
 
 		c.JSON(http.StatusOK, out)
 	}

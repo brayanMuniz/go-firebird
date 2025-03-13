@@ -99,8 +99,7 @@ type NewLocationMetaData struct {
 	NewLocation  bool
 }
 
-// I DID IT! I DID IT! I DID IT! I DID IT! LETS GOOOOOOOOOOOO!
-func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) error {
+func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]string, error) {
 	ctx := context.Background()
 
 	// Build arrays for ADDRESS and LOCATION entities.
@@ -132,8 +131,8 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) err
 	fmt.Printf("\nRunning transaction for: %s, hashed: %s\n", data.NewSkeet.UID, hashedSkeetID)
 
 	// Run a transaction to perform all writes atomically.
+	newLocationsData := []NewLocationMetaData{}
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		newLocationsData := []NewLocationMetaData{}
 
 		// For each entity of type LOCATION or ADDRESS, check if its new and add it to newLocationsData
 		for _, entity := range data.Entities {
@@ -214,11 +213,17 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) err
 
 	if err != nil {
 		log.Printf("Transaction failed: %v", err)
-		return err
+		return nil, err
+	}
+
+	// Extract the new location names to return.
+	var newLocationNames []string
+	for _, locMeta := range newLocationsData {
+		newLocationNames = append(newLocationNames, locMeta.LocationName)
 	}
 
 	fmt.Printf("\nSuccessfully saved complete skeet with hashed ID: %s\n", hashedSkeetID)
-	return nil
+	return newLocationNames, nil
 }
 
 func GetNewLocations(client *firestore.Client) ([]LocationData, error) {
