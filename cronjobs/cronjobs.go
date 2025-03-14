@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	language "cloud.google.com/go/language/apiv2"
 	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/robfig/cron/v3"
 )
 
-// NOTE: This will later be changed to send to the model, but for testing this works
 // FetchBlueskyHandler fetches a hydrated feed using the Bluesky API.
 type FeedCallParameters struct {
 	uri   string
@@ -58,10 +58,11 @@ func callFeed(p FeedCallParameters) {
 
 }
 
-func InitCronJobs(firestoreClient *firestore.Client) {
+func InitCronJobs(firestoreClient *firestore.Client, nlpClient *language.Client) {
 	log.Println("\nStarting Cron Jobs -------------------------------------------------------")
 	c := cron.New()
 
+	// Max limit is 100
 	// Fire Feed: Run every 10 minutes at 0 minutes
 	_, err := c.AddFunc("*/10 * * * *", func() {
 		log.Println("\nCronJob: Fire Feed Running")

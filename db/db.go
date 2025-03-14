@@ -99,6 +99,7 @@ type NewLocationMetaData struct {
 	NewLocation  bool
 }
 
+// Returns new location names
 func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]string, error) {
 	ctx := context.Background()
 
