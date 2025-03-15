@@ -2,6 +2,7 @@ package cronjobs
 
 import (
 	"context"
+	"go-firebird/skeetprocessor"
 	"go-firebird/types"
 	"log"
 	"net/http"
@@ -13,17 +14,10 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// FetchBlueskyHandler fetches a hydrated feed using the Bluesky API.
-type FeedCallParameters struct {
-	uri   string
-	limit int
-}
-
 const (
 	feedMethod = "app.bsky.feed.getFeed"
 )
 
-// TODO: update this so it returns a list of gotten post and an err if there were any
 func callFeed(uri string) (types.FeedResponse, error) {
 	client := &xrpc.Client{
 		Client:    &http.Client{Timeout: 10 * time.Second},
@@ -33,13 +27,10 @@ func callFeed(uri string) (types.FeedResponse, error) {
 
 	feedAtURI := uri
 
-	// Read query parameters
-	limit := 50
-
 	// The limit can be adjusted (min 1, max 100, default 50).
 	params := map[string]interface{}{
 		"feed":  feedAtURI,
-		"limit": limit,
+		"limit": 50,
 	}
 
 	log.Printf("Fetching feed with params: %+v", params)
@@ -64,34 +55,47 @@ func InitCronJobs(firestoreClient *firestore.Client, nlpClient *language.Client)
 	hurricaneURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejwgffwqky"
 
 	c := cron.New()
-
-	// Fire Feed: Run every 10 minutes at 0 minutes
-	_, err := c.AddFunc("*/10 * * * *", func() {
+	// Fire Feed: Run every 3 hours starting at 0:00.
+	_, err := c.AddFunc("0 0-23/3 * * *", func() {
 		log.Println("\nCronJob: Fire Feed Running")
-		// TODO:
-		_, err := callFeed(fireURI)
+		out, err := callFeed(fireURI)
 		if err != nil {
 			log.Println("Error getting Fire Feed", err)
+		} else {
+			skeetprocessor.SaveFeed(out, firestoreClient, nlpClient)
 		}
 	})
 	if err != nil {
 		log.Println("Error scheduling Fire Feed", err)
 	}
 
-	// Earthquake Feed: Run every 10 minutes at 2 minute mark
-	_, err = c.AddFunc("2-59/10 * * * *", func() {
+	// Earthquake Feed: Run every 3 hours starting at 1:00.
+	_, err = c.AddFunc("0 1-23/3 * * *", func() {
 		log.Println("\nCronJob: EarthQuake Feed Running")
 		callFeed(earthQuakeURI)
+		out, err := callFeed(fireURI)
+		if err != nil {
+			log.Println("Error getting Earthquake Feed", err)
+		} else {
+			skeetprocessor.SaveFeed(out, firestoreClient, nlpClient)
+
+		}
 
 	})
 	if err != nil {
 		log.Println("Error scheduling EarthQuake Feed:", err)
 	}
 
-	// Hurricane Feed: Run every 10 minutes at 4 minutes mark
-	_, err = c.AddFunc("4-59/10 * * * *", func() {
+	// Hurricane Feed: Run every 3 hours starting at 2:00.
+	_, err = c.AddFunc("0 2-23/3 * * *", func() {
 		log.Println("\nCronJob: Hurricane Feed Running")
-		callFeed(hurricaneURI)
+		out, err := callFeed(hurricaneURI)
+		if err != nil {
+			log.Println("Error getting Hurricane Feed", err)
+		} else {
+			skeetprocessor.SaveFeed(out, firestoreClient, nlpClient)
+		}
+
 	})
 	if err != nil {
 		log.Println("Error scheduling Hurricane Feed:", err)
