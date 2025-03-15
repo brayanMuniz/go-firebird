@@ -13,14 +13,74 @@ import (
 
 	"cloud.google.com/go/firestore"
 	language "cloud.google.com/go/language/apiv2"
+	"go-firebird/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type SaveSkeetResult struct {
+	SavedSkeetID         string        `json:"savedSkeetId"`
+	Content              string        `json:"content"`
+	NewLocationNames     []string      `json:"newLocationNames"`
+	ProcessedEntityCount int           `json:"processedEntityCount"`
+	Classification       []float64     `json:"classification"`
+	Sentiment            nlp.Sentiment `json:"sentiment"`
+	AlreadyExist         bool          `json:"alreadyExist"`
+	ErrorSaving          bool          `json:"errorSaving"`
+}
 
 // HashString hashes a given string using SHA-256.
 func HashString(s string) string {
 	h := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(h[:])
+}
+
+func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClient *language.Client) []SaveSkeetResult {
+	resultsChan := make(chan SaveSkeetResult, len(out.Feed))
+	var wg sync.WaitGroup
+
+	for _, v := range out.Feed {
+		if v.Post.URI != "" {
+			wg.Add(1)
+			feedItem := v // capture variable for goroutine
+			go func() {
+				defer wg.Done()
+				newSkeet := db.Skeet{
+					Avatar:      feedItem.Post.Author.Avatar,
+					Content:     feedItem.Post.Record.Text,
+					Handle:      feedItem.Post.Author.Handle,
+					DisplayName: feedItem.Post.Author.DisplayName,
+					UID:         feedItem.Post.URI,
+					Timestamp:   feedItem.Post.Record.CreatedAt,
+				}
+				savedSkeetResult, err := SaveSkeet(newSkeet, firestoreClient, nlpClient)
+				if err != nil {
+					savedSkeetResult = SaveSkeetResult{
+						SavedSkeetID:         feedItem.Post.URI,
+						NewLocationNames:     nil,
+						ProcessedEntityCount: 0,
+						Classification:       nil,
+						Sentiment:            nlp.Sentiment{},
+						AlreadyExist:         false,
+						Content:              feedItem.Post.Record.Text,
+						ErrorSaving:          true,
+					}
+				}
+				resultsChan <- savedSkeetResult
+			}()
+		}
+	}
+
+	wg.Wait()
+	close(resultsChan)
+
+	resultsList := make([]SaveSkeetResult, 0, len(out.Feed))
+	for result := range resultsChan {
+		resultsList = append(resultsList, result)
+	}
+
+	return resultsList
+
 }
 
 func SaveSkeet(newSkeet db.Skeet, firestoreClient *firestore.Client, nlpClient *language.Client) (SaveSkeetResult, error) {

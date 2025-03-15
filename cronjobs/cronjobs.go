@@ -23,21 +23,18 @@ const (
 	feedMethod = "app.bsky.feed.getFeed"
 )
 
-func callFeed(p FeedCallParameters) {
-	// Initialize the xrpc client to use the public API endpoint.
+// TODO: update this so it returns a list of gotten post and an err if there were any
+func callFeed(uri string) (types.FeedResponse, error) {
 	client := &xrpc.Client{
 		Client:    &http.Client{Timeout: 10 * time.Second},
 		Host:      "https://public.api.bsky.app", // public endpoint for unauthenticated requests.
-		UserAgent: nil,                           // can set a custom agent
+		UserAgent: nil,
 	}
 
-	feedAtURI := p.uri
+	feedAtURI := uri
 
 	// Read query parameters
-	limit := 10
-	if p.limit != 0 {
-		limit = p.limit
-	}
+	limit := 50
 
 	// The limit can be adjusted (min 1, max 100, default 50).
 	params := map[string]interface{}{
@@ -53,21 +50,29 @@ func callFeed(p FeedCallParameters) {
 	err := client.Do(context.Background(), xrpc.Query, "json", feedMethod, params, nil, &out)
 	if err != nil {
 		log.Printf("Error fetching feed via xrpc: %v", err)
-		return
+		return out, err
 	}
+	return out, nil
 
 }
 
 func InitCronJobs(firestoreClient *firestore.Client, nlpClient *language.Client) {
 	log.Println("\nStarting Cron Jobs -------------------------------------------------------")
+
+	fireURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejsyozb6iq"
+	earthQuakeURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejxlobe474"
+	hurricaneURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejwgffwqky"
+
 	c := cron.New()
 
-	// Max limit is 100
 	// Fire Feed: Run every 10 minutes at 0 minutes
 	_, err := c.AddFunc("*/10 * * * *", func() {
 		log.Println("\nCronJob: Fire Feed Running")
-		fireURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejsyozb6iq"
-		callFeed(FeedCallParameters{uri: fireURI, limit: 10})
+		// TODO:
+		_, err := callFeed(fireURI)
+		if err != nil {
+			log.Println("Error getting Fire Feed", err)
+		}
 	})
 	if err != nil {
 		log.Println("Error scheduling Fire Feed", err)
@@ -76,8 +81,7 @@ func InitCronJobs(firestoreClient *firestore.Client, nlpClient *language.Client)
 	// Earthquake Feed: Run every 10 minutes at 2 minute mark
 	_, err = c.AddFunc("2-59/10 * * * *", func() {
 		log.Println("\nCronJob: EarthQuake Feed Running")
-		earthQuakeURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejxlobe474"
-		callFeed(FeedCallParameters{uri: earthQuakeURI, limit: 10})
+		callFeed(earthQuakeURI)
 
 	})
 	if err != nil {
@@ -87,8 +91,7 @@ func InitCronJobs(firestoreClient *firestore.Client, nlpClient *language.Client)
 	// Hurricane Feed: Run every 10 minutes at 4 minutes mark
 	_, err = c.AddFunc("4-59/10 * * * *", func() {
 		log.Println("\nCronJob: Hurricane Feed Running")
-		hurricaneURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejwgffwqky"
-		callFeed(FeedCallParameters{uri: hurricaneURI, limit: 10})
+		callFeed(hurricaneURI)
 	})
 	if err != nil {
 		log.Println("Error scheduling Hurricane Feed:", err)

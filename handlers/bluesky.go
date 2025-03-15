@@ -1,21 +1,17 @@
 package handlers
 
 import (
+	"cloud.google.com/go/firestore"
+	language "cloud.google.com/go/language/apiv2"
 	"context"
-	"go-firebird/db"
-	"go-firebird/nlp"
+	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/gin-gonic/gin"
 	"go-firebird/skeetprocessor"
 	"go-firebird/types"
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
-
-	"cloud.google.com/go/firestore"
-	language "cloud.google.com/go/language/apiv2"
-	"github.com/bluesky-social/indigo/xrpc"
-	"github.com/gin-gonic/gin"
 )
 
 // documentation: https://github.com/bluesky-social/indigo/blob/2503553ea604ea7f0bfa6a021b284b371ac2ac96/xrpc/xrpc.go#L114
@@ -93,49 +89,7 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 		log.Printf("Fetched feed from /api/firebird/blusky using feed: %s", feedAtURI)
 	}
 
-	// Process each skeet concurrently.
-	resultsChan := make(chan skeetprocessor.SaveSkeetResult, len(out.Feed))
-	var wg sync.WaitGroup
-
-	for _, v := range out.Feed {
-		if v.Post.URI != "" {
-			wg.Add(1)
-			feedItem := v // capture variable for goroutine
-			go func() {
-				defer wg.Done()
-				newSkeet := db.Skeet{
-					Avatar:      feedItem.Post.Author.Avatar,
-					Content:     feedItem.Post.Record.Text,
-					Handle:      feedItem.Post.Author.Handle,
-					DisplayName: feedItem.Post.Author.DisplayName,
-					UID:         feedItem.Post.URI,
-					Timestamp:   feedItem.Post.Record.CreatedAt,
-				}
-				savedSkeetResult, err := skeetprocessor.SaveSkeet(newSkeet, firestoreClient, nlpClient)
-				if err != nil {
-					savedSkeetResult = skeetprocessor.SaveSkeetResult{
-						SavedSkeetID:         feedItem.Post.URI,
-						NewLocationNames:     nil,
-						ProcessedEntityCount: 0,
-						Classification:       nil,
-						Sentiment:            nlp.Sentiment{},
-						AlreadyExist:         false,
-						Content:              feedItem.Post.Record.Text,
-						ErrorSaving:          true,
-					}
-				}
-				resultsChan <- savedSkeetResult
-			}()
-		}
-	}
-
-	wg.Wait()
-	close(resultsChan)
-
-	resultsList := make([]skeetprocessor.SaveSkeetResult, 0, len(out.Feed))
-	for result := range resultsChan {
-		resultsList = append(resultsList, result)
-	}
+	resultsList := skeetprocessor.SaveFeed(out, firestoreClient, nlpClient)
 
 	c.JSON(http.StatusOK, resultsList)
 }
