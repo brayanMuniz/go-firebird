@@ -99,6 +99,15 @@ type NewLocationMetaData struct {
 	NewLocation  bool
 }
 
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
 // Returns new location names
 func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]string, error) {
 	ctx := context.Background()
@@ -112,6 +121,9 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]
 			locations = append(locations, entity)
 		}
 	}
+
+	// hashedLocation Id's that have "invalid" location data
+	invalidLocations := []string{}
 
 	// Prepare main skeet data.
 	skeetData := map[string]interface{}{
@@ -142,12 +154,10 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]
 				// Retrieve the current value of "newLocation"
 				hashedLocationID := HashString(entity.Name)
 				locationDocRef := client.Collection("locations").Doc(hashedLocationID)
-				_, err := tx.Get(locationDocRef)
+				locationDoc, err := tx.Get(locationDocRef)
 				if err != nil {
-
 					if status.Code(err) == codes.NotFound {
 						// If the document doesn't exist, create it and set newLocation to true.
-
 						newLocationsData = append(newLocationsData, NewLocationMetaData{
 							LocationName: entity.Name,
 							Type:         entity.Type,
@@ -156,6 +166,28 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]
 
 					} else {
 						return fmt.Errorf("error getting location doc for %s: %w", entity.Name, err)
+					}
+
+				} else {
+					// Extract document data and check its geocoding fields to see if its invalid
+
+					// NOTE: if it is "invalid" the value is 0, it will return an err, so set to default
+					dataMap := locationDoc.Data()
+					lat, latOk := dataMap["lat"].(float64)
+					if !latOk {
+						lat = 0
+					}
+					long, longOk := dataMap["long"].(float64)
+					if !longOk {
+						long = 0
+					}
+					newLocation, nlOk := dataMap["newLocation"].(bool)
+					// If the document is validly structured, check if it's invalid.
+					if nlOk {
+						if lat == 0 && long == 0 && newLocation == false {
+							// Mark as invalid by skipping addition.
+							invalidLocations = append(invalidLocations, hashedLocationID)
+						}
 					}
 
 				}
@@ -188,11 +220,15 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]
 
 		}
 
-		// loop over again and set all the skeet data
+		// loop over again and set all the skeet data in /locations/location/skeets
 		for _, entity := range data.Entities {
+			hashedLocationID := HashString(entity.Name)
 			if entity.Type == "LOCATION" || entity.Type == "ADDRESS" {
+				if contains(invalidLocations, hashedLocationID) {
+					fmt.Printf("Skipping skeet subcollection write for invalid location: %s\n", entity.Name)
+					continue
+				}
 
-				hashedLocationID := HashString(entity.Name)
 				locationDocRef := client.Collection("locations").Doc(hashedLocationID)
 
 				// In the subcollection location/locId/skeetIds, store the skeet data with entity details.
