@@ -3,28 +3,16 @@ package db
 import (
 	"cloud.google.com/go/firestore"
 	"context"
+	"fmt"
 	"go-firebird/geocode"
+	"go-firebird/types"
+	"google.golang.org/api/iterator"
 	"log"
 )
 
-// TODO: update this struct in order to have a sentiment
-type LocationData struct {
-	LocationName     string  `firestore:"locationName"`
-	FormattedAddress string  `firestore:"formattedAddress"`
-	Lat              float64 `firestore:"lat"`
-	Long             float64 `firestore:"long"`
-	Type             string  `firestore:"type"`
-}
-
-type NewLocationMetaData struct {
-	LocationName string
-	Type         string
-	NewLocation  bool
-}
-
 // locations who have been able to be geocoded
-func GetValidLocations(client *firestore.Client) ([]LocationData, error) {
-	var validLocations []LocationData
+func GetValidLocations(client *firestore.Client) ([]types.LocationData, error) {
+	var validLocations []types.LocationData
 	ctx := context.Background()
 
 	// Query all valid documents
@@ -38,7 +26,7 @@ func GetValidLocations(client *firestore.Client) ([]LocationData, error) {
 
 	// Convert each doc to LocationData struct
 	for _, doc := range docs {
-		var location LocationData
+		var location types.LocationData
 		if err := doc.DataTo(&location); err != nil {
 			return nil, err
 		}
@@ -49,8 +37,54 @@ func GetValidLocations(client *firestore.Client) ([]LocationData, error) {
 
 }
 
-func GetNewLocations(client *firestore.Client) ([]LocationData, error) {
-	var newLocations []LocationData
+// single valid location based on id
+func GetValidLocation(client *firestore.Client, locId string) (types.LocationData, error) {
+	ctx := context.Background()
+	var locationData types.LocationData
+
+	doc, err := client.Collection("locations").Doc(locId).Get(ctx)
+	if err != nil {
+		return locationData, err
+	}
+
+	if err := doc.DataTo(&locationData); err != nil {
+		return locationData, err
+	}
+	return locationData, nil
+}
+
+func GetSkeetsSubCollection(client *firestore.Client, locationDocID string, start, end string) ([]types.SkeetSubDoc, error) {
+	ctx := context.Background()
+	var skeets []types.SkeetSubDoc
+
+	iter := client.Collection("locations").
+		Doc(locationDocID).
+		Collection("skeetIds").
+		Where("skeetData.timestamp", ">=", start).
+		Where("skeetData.timestamp", "<=", end).
+		Documents(ctx)
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error iterating skeets: %w", err)
+		}
+		var s types.SkeetSubDoc
+		if err := doc.DataTo(&s); err != nil {
+			return nil, fmt.Errorf("error converting document to SubSkeet: %w", err)
+		}
+		skeets = append(skeets, s)
+	}
+
+	return skeets, nil
+
+}
+
+func GetNewLocations(client *firestore.Client) ([]types.LocationData, error) {
+	var newLocations []types.LocationData
 	ctx := context.Background()
 
 	// Query all documents where newlocation == true
@@ -64,7 +98,7 @@ func GetNewLocations(client *firestore.Client) ([]LocationData, error) {
 
 	// Convert each doc to LocationData struct
 	for _, doc := range docs {
-		var location LocationData
+		var location types.LocationData
 		if err := doc.DataTo(&location); err != nil {
 			return nil, err
 		}
@@ -74,7 +108,6 @@ func GetNewLocations(client *firestore.Client) ([]LocationData, error) {
 	return newLocations, nil
 }
 
-// uses newLocation flag to determine if an update is needed
 func UpdateLocationGeocoding(client *firestore.Client, locationName string) {
 	hashedLocationID := HashString(locationName)
 	results, err := geocode.GeocodeAddress(locationName)
@@ -92,7 +125,7 @@ func UpdateLocationGeocoding(client *firestore.Client, locationName string) {
 		"formattedAddress": result,
 		"lat":              0,
 		"long":             0,
-		"newLocation":      false,
+		"newLocation":      false, // uses newLocation flag to determine if an update is needed
 	}
 
 	if len(results) == 0 {

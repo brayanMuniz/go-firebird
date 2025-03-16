@@ -49,7 +49,7 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 			Feed: []types.FeedEntry{
 				{
 					Post: types.Post{
-						URI: "mock:uri:7",
+						URI: "mock:uri:8",
 						Author: types.Author{
 							Avatar:      "https://example.com/avatar.png",
 							Handle:      "testhandle",
@@ -65,7 +65,6 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 		}
 		log.Println("Using mock test data")
 	} else {
-		// Prepare API parameters.
 		params := map[string]interface{}{
 			"feed":   feedAtURI,
 			"limit":  limit,

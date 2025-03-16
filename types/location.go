@@ -1,0 +1,30 @@
+package types
+
+type LocationData struct {
+	LocationName     string                 `firestore:"locationName"`
+	FormattedAddress string                 `firestore:"formattedAddress"`
+	Lat              float64                `firestore:"lat"`
+	Long             float64                `firestore:"long"`
+	Type             string                 `firestore:"type"`
+	AvgSentimentList []AvgLocationSentiment `firestore:"avgSentimentList"`
+}
+
+type AvgLocationSentiment struct {
+	TimeStamp        string  `firestore:"timeStamp"`
+	SkeetsAmount     int     `firestore:"skeetsAmount"`
+	AverageSentiment float64 `firestore:"averageSentiment"`
+}
+
+type NewLocationMetaData struct {
+	LocationName string
+	Type         string
+	NewLocation  bool
+}
+
+// skeet stored under a location's subcollection.
+type SkeetSubDoc struct {
+	Mentions     []EntityMention `firestore:"mentions" json:"mentions"`
+	LocationName string          `firestore:"locationName" json:"locationName"`
+	Type         string          `firestore:"type" json:"type"`
+	SkeetData    Skeet           `firestore:"skeetData" json:"skeetData"`
+}

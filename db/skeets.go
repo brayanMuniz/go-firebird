@@ -4,37 +4,19 @@ import (
 	"cloud.google.com/go/firestore"
 	"context"
 	"fmt"
-	"go-firebird/nlp"
+	"go-firebird/types"
 	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log"
 )
 
-// Skeet represents a post stored in Firestore
-type Skeet struct {
-	Avatar      string `firestore:"avatar"`
-	Content     string `firestore:"content"`
-	Timestamp   string `firestore:"timestamp"`
-	Handle      string `firestore:"handle"`
-	DisplayName string `firestore:"displayName"`
-	UID         string `firestore:"uid"`
-}
-
-// This was made out of necessity because of how long the parameters would have been lol
-type SaveCompleteSkeetType struct {
-	NewSkeet       Skeet
-	Classification []float64
-	Entities       []nlp.Entity
-	Sentiment      nlp.Sentiment
-}
-
 // Returns new location names
-func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]string, error) {
+func SaveCompleteSkeet(client *firestore.Client, data types.SaveCompleteSkeetType) ([]string, error) {
 	ctx := context.Background()
 
 	// Build arrays for ADDRESS and LOCATION entities.
-	var addresses, locations []nlp.Entity
+	var addresses, locations []types.Entity
 	for _, entity := range data.Entities {
 		if entity.Type == "ADDRESS" {
 			addresses = append(addresses, entity)
@@ -65,7 +47,7 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]
 	fmt.Printf("\nRunning transaction for: %s, hashed: %s\n", data.NewSkeet.UID, hashedSkeetID)
 
 	// Run a transaction to perform all writes atomically.
-	newLocationsData := []NewLocationMetaData{}
+	newLocationsData := []types.NewLocationMetaData{}
 	err := client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
 
 		// For each entity of type LOCATION or ADDRESS, check if its new and add it to newLocationsData
@@ -79,7 +61,7 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]
 				if err != nil {
 					if status.Code(err) == codes.NotFound {
 						// If the document doesn't exist, create it and set newLocation to true.
-						newLocationsData = append(newLocationsData, NewLocationMetaData{
+						newLocationsData = append(newLocationsData, types.NewLocationMetaData{
 							LocationName: entity.Name,
 							Type:         entity.Type,
 							NewLocation:  true,
@@ -130,9 +112,10 @@ func SaveCompleteSkeet(client *firestore.Client, data SaveCompleteSkeetType) ([]
 
 			// Convert struct to map.
 			locationDataMap := map[string]interface{}{
-				"locationName": value.LocationName,
-				"type":         value.Type,
-				"newLocation":  value.NewLocation,
+				"locationName":     value.LocationName,
+				"type":             value.Type,
+				"newLocation":      value.NewLocation,
+				"avgSentimentList": []types.AvgLocationSentiment{},
 			}
 
 			if err := tx.Set(locationDocRef, locationDataMap, firestore.MergeAll); err != nil {
@@ -198,7 +181,7 @@ func ReadSkeets(client *firestore.Client) {
 			log.Fatalf("Error iterating documents: %v", err)
 		}
 
-		var skeet Skeet
+		var skeet types.Skeet
 		if err := doc.DataTo(&skeet); err != nil {
 			log.Fatalf("Error converting to struct: %v", err)
 		}
@@ -207,7 +190,7 @@ func ReadSkeets(client *firestore.Client) {
 }
 
 // WriteSkeet adds a new skeet to Firestore.
-func WriteSkeet(client *firestore.Client, newSkeet Skeet) {
+func WriteSkeet(client *firestore.Client, newSkeet types.Skeet) {
 	ctx := context.Background()
 	hashedSkeetID := HashString(newSkeet.UID)
 	_, err := client.Collection("skeets").Doc(hashedSkeetID).Set(ctx, newSkeet)

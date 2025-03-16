@@ -1,13 +1,15 @@
 package handlers
 
 import (
-	"cloud.google.com/go/firestore"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"go-firebird/db"
+	"go-firebird/types"
 	"log"
 	"net/http"
 	"sync"
+
+	"cloud.google.com/go/firestore"
+	"github.com/gin-gonic/gin"
 )
 
 func TestUpdateGeocodingDBTest(c *gin.Context, firestoreClient *firestore.Client) {
@@ -24,7 +26,7 @@ func TestUpdateGeocodingDBTest(c *gin.Context, firestoreClient *firestore.Client
 	for v, loc := range newLocations {
 		println(v)
 		wg.Add(1)
-		go func(location db.LocationData) {
+		go func(location types.LocationData) {
 			defer wg.Done()
 			log.Printf("Updating geocode for location hash: %s", location.LocationName)
 			db.UpdateLocationGeocoding(firestoreClient, location.LocationName)

@@ -21,9 +21,9 @@ func TestEntity(c *gin.Context, nlpClient *language.Client) {
 
 	// JSON response struct
 	type SkeetEntityResponse struct {
-		Author   string       `json:"author"`
-		Content  string       `json:"content"`
-		Entities []nlp.Entity `json:"entities"`
+		Author   string         `json:"author"`
+		Content  string         `json:"content"`
+		Entities []types.Entity `json:"entities"`
 	}
 
 	// If mockParam == "t", use mock data instead of fetching from Bluesky.

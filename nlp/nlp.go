@@ -1,15 +1,18 @@
 package nlp
 
 import (
-	language "cloud.google.com/go/language/apiv2"
-	"cloud.google.com/go/language/apiv2/languagepb"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"google.golang.org/api/option"
+	"go-firebird/types"
 	"log"
 	"os"
 	"sync"
+
+	language "cloud.google.com/go/language/apiv2"
+	"cloud.google.com/go/language/apiv2/languagepb"
+	"google.golang.org/api/option"
 )
 
 // languageClient a singleton languageClient instance.
@@ -18,29 +21,8 @@ var (
 	clientOnce     sync.Once
 )
 
-// Sentiment
-type Sentiment struct {
-	Magnitude float32 `json:"magnitude"`
-	Score     float32 `json:"score"`
-}
-
-// Entity represents a named entity detected in the text.
-type Entity struct {
-	Name     string            `json:"name"`
-	Type     string            `json:"type"`
-	Metadata map[string]string `json:"metadata"`
-	Mentions []EntityMention   `json:"mentions"`
-}
-
-// EntityMention holds details about an entity mention.
-type EntityMention struct {
-	Content     string  `json:"content"`
-	BeginOffset int32   `json:"begin_offset"`
-	Probability float32 `json:"probability"`
-}
-
-func AnalyzeSentiment(client *language.Client, text string) (Sentiment, error) {
-	var sentiment Sentiment
+func AnalyzeSentiment(client *language.Client, text string) (types.Sentiment, error) {
+	var sentiment types.Sentiment
 	ctx := context.Background()
 	req := &languagepb.AnalyzeSentimentRequest{
 		Document: &languagepb.Document{
@@ -65,7 +47,7 @@ func AnalyzeSentiment(client *language.Client, text string) (Sentiment, error) {
 
 // sends text to the Cloud Natural Language API to extract named entities
 // and returns a slice of Entity structs along with any error encountered
-func AnalyzeEntities(client *language.Client, text string) ([]Entity, error) {
+func AnalyzeEntities(client *language.Client, text string) ([]types.Entity, error) {
 	ctx := context.Background()
 	req := &languagepb.AnalyzeEntitiesRequest{
 		Document: &languagepb.Document{
@@ -82,11 +64,11 @@ func AnalyzeEntities(client *language.Client, text string) ([]Entity, error) {
 		return nil, fmt.Errorf("AnalyzeEntities error: %w", err)
 	}
 
-	var entities []Entity
+	var entities []types.Entity
 	for _, e := range resp.Entities {
-		var mentions []EntityMention
+		var mentions []types.EntityMention
 		for _, m := range e.Mentions {
-			mentions = append(mentions, EntityMention{
+			mentions = append(mentions, types.EntityMention{
 				Content:     m.Text.Content,
 				BeginOffset: m.Text.BeginOffset,
 				Probability: m.Probability,
@@ -96,7 +78,7 @@ func AnalyzeEntities(client *language.Client, text string) ([]Entity, error) {
 		for k, v := range e.Metadata {
 			md[k] = v
 		}
-		entities = append(entities, Entity{
+		entities = append(entities, types.Entity{
 			Name:     e.Name,
 			Type:     e.Type.String(),
 			Metadata: md,
@@ -135,4 +117,20 @@ func CloseLanguageClient() {
 	if languageClient != nil {
 		languageClient.Close()
 	}
+}
+
+func ComputeSimpleAverageSentiment(skeets []types.SkeetSubDoc) (float32, error) {
+	var totalScore float32
+	count := 0
+
+	for _, skeet := range skeets {
+		totalScore += skeet.SkeetData.Sentiment.Score
+		count++
+	}
+
+	if count == 0 {
+		return 0, errors.New("no skeets provided")
+	}
+
+	return totalScore / float32(count), nil
 }

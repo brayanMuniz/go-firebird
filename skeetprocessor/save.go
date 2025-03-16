@@ -19,14 +19,14 @@ import (
 )
 
 type SaveSkeetResult struct {
-	SavedSkeetID         string        `json:"savedSkeetId"`
-	Content              string        `json:"content"`
-	NewLocationNames     []string      `json:"newLocationNames"`
-	ProcessedEntityCount int           `json:"processedEntityCount"`
-	Classification       []float64     `json:"classification"`
-	Sentiment            nlp.Sentiment `json:"sentiment"`
-	AlreadyExist         bool          `json:"alreadyExist"`
-	ErrorSaving          bool          `json:"errorSaving"`
+	SavedSkeetID         string          `json:"savedSkeetId"`
+	Content              string          `json:"content"`
+	NewLocationNames     []string        `json:"newLocationNames"`
+	ProcessedEntityCount int             `json:"processedEntityCount"`
+	Classification       []float64       `json:"classification"`
+	Sentiment            types.Sentiment `json:"sentiment"`
+	AlreadyExist         bool            `json:"alreadyExist"`
+	ErrorSaving          bool            `json:"errorSaving"`
 }
 
 // HashString hashes a given string using SHA-256.
@@ -45,7 +45,7 @@ func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClie
 			feedItem := v // capture variable for goroutine
 			go func() {
 				defer wg.Done()
-				newSkeet := db.Skeet{
+				newSkeet := types.Skeet{
 					Avatar:      feedItem.Post.Author.Avatar,
 					Content:     feedItem.Post.Record.Text,
 					Handle:      feedItem.Post.Author.Handle,
@@ -60,7 +60,7 @@ func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClie
 						NewLocationNames:     nil,
 						ProcessedEntityCount: 0,
 						Classification:       nil,
-						Sentiment:            nlp.Sentiment{},
+						Sentiment:            types.Sentiment{},
 						AlreadyExist:         false,
 						Content:              feedItem.Post.Record.Text,
 						ErrorSaving:          true,
@@ -83,7 +83,7 @@ func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClie
 
 }
 
-func SaveSkeet(newSkeet db.Skeet, firestoreClient *firestore.Client, nlpClient *language.Client) (SaveSkeetResult, error) {
+func SaveSkeet(newSkeet types.Skeet, firestoreClient *firestore.Client, nlpClient *language.Client) (SaveSkeetResult, error) {
 	ctx := context.Background()
 	hashedSkeetID := db.HashString(newSkeet.UID)
 
@@ -113,8 +113,8 @@ func SaveSkeet(newSkeet db.Skeet, firestoreClient *firestore.Client, nlpClient *
 	// Run ML model call, entity extraction, and sentiment analysis concurrently.
 	var (
 		classification         []float64
-		nlpEntities            []nlp.Entity
-		sentiment              nlp.Sentiment
+		nlpEntities            []types.Entity
+		sentiment              types.Sentiment
 		mlErr, nlpErr, sentErr error
 	)
 	var wg sync.WaitGroup
@@ -136,7 +136,7 @@ func SaveSkeet(newSkeet db.Skeet, firestoreClient *firestore.Client, nlpClient *
 		nlpEntities, err = nlp.AnalyzeEntities(nlpClient, newSkeet.Content)
 		if err != nil {
 			log.Printf("Error analyzing entities: %v", err)
-			nlpEntities = []nlp.Entity{}
+			nlpEntities = []types.Entity{}
 			nlpErr = err
 		}
 	}()
@@ -162,7 +162,7 @@ func SaveSkeet(newSkeet db.Skeet, firestoreClient *firestore.Client, nlpClient *
 	result.Classification = classification
 	result.Sentiment = sentiment
 
-	data := db.SaveCompleteSkeetType{
+	data := types.SaveCompleteSkeetType{
 		NewSkeet:       newSkeet,
 		Classification: classification,
 		Entities:       nlpEntities,

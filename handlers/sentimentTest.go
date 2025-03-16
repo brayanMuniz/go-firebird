@@ -21,9 +21,9 @@ func TestSentiment(c *gin.Context, nlpClient *language.Client) {
 
 	// JSON response struct
 	type SkeetSentimentResponse struct {
-		Author    string        `json:"author"`
-		Content   string        `json:"content"`
-		Sentiment nlp.Sentiment `json:"sentiment"`
+		Author    string          `json:"author"`
+		Content   string          `json:"content"`
+		Sentiment types.Sentiment `json:"sentiment"`
 	}
 
 	// If mockParam == "t", use mock data instead of fetching from Bluesky.
