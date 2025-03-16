@@ -1,16 +1,13 @@
 package handlers
 
 import (
+	"cloud.google.com/go/firestore"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"go-firebird/db"
 	"log"
 	"net/http"
 	"sync"
-
-	"github.com/gin-gonic/gin"
-
-	"go-firebird/db"
-
-	"cloud.google.com/go/firestore"
 )
 
 func TestUpdateGeocodingDBTest(c *gin.Context, firestoreClient *firestore.Client) {

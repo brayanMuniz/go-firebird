@@ -48,8 +48,11 @@ func main() {
 	}
 	defer nlp.CloseLanguageClient()
 
-	// Init cron jobs
-	cronjobs.InitCronJobs(firestoreClient, languageClient)
+	// Init cron jobs if in production
+	productionCheck := os.Getenv("PRODUCTION")
+	if productionCheck == "t" {
+		cronjobs.InitCronJobs(firestoreClient, languageClient)
+	}
 
 	r := routes.SetupRouter(firestoreClient, languageClient, geocodeClient)
 	if err := r.Run(":8080"); err != nil {

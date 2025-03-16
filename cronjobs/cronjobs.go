@@ -55,8 +55,8 @@ func InitCronJobs(firestoreClient *firestore.Client, nlpClient *language.Client)
 	hurricaneURI := "at://did:plc:qiknc4t5rq7yngvz7g4aezq7/app.bsky.feed.generator/aaaejwgffwqky"
 
 	c := cron.New()
-	// Fire Feed: Run every 3 hours starting at 0:00.
-	_, err := c.AddFunc("0 0-23/3 * * *", func() {
+	// Fire Feed: Run every 4 hours starting at 0:00.
+	_, err := c.AddFunc("0 0-23/4 * * *", func() {
 		log.Println("\nCronJob: Fire Feed Running")
 		out, err := callFeed(fireURI)
 		if err != nil {
@@ -69,8 +69,8 @@ func InitCronJobs(firestoreClient *firestore.Client, nlpClient *language.Client)
 		log.Println("Error scheduling Fire Feed", err)
 	}
 
-	// Earthquake Feed: Run every 3 hours starting at 1:00.
-	_, err = c.AddFunc("0 1-23/3 * * *", func() {
+	// Earthquake Feed: Run every 4 hours starting at 1:00.
+	_, err = c.AddFunc("0 1-23/4 * * *", func() {
 		log.Println("\nCronJob: EarthQuake Feed Running")
 		callFeed(earthQuakeURI)
 		out, err := callFeed(fireURI)
@@ -86,8 +86,8 @@ func InitCronJobs(firestoreClient *firestore.Client, nlpClient *language.Client)
 		log.Println("Error scheduling EarthQuake Feed:", err)
 	}
 
-	// Hurricane Feed: Run every 3 hours starting at 2:00.
-	_, err = c.AddFunc("0 2-23/3 * * *", func() {
+	// Hurricane Feed: Run every 4 hours starting at 2:00.
+	_, err = c.AddFunc("0 2-23/4 * * *", func() {
 		log.Println("\nCronJob: Hurricane Feed Running")
 		out, err := callFeed(hurricaneURI)
 		if err != nil {
