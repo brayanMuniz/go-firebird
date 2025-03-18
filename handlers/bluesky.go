@@ -1,17 +1,18 @@
 package handlers
 
 import (
-	"cloud.google.com/go/firestore"
-	language "cloud.google.com/go/language/apiv2"
 	"context"
-	"github.com/bluesky-social/indigo/xrpc"
-	"github.com/gin-gonic/gin"
-	"go-firebird/skeetprocessor"
+	"go-firebird/processor"
 	"go-firebird/types"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"cloud.google.com/go/firestore"
+	language "cloud.google.com/go/language/apiv2"
+	"github.com/bluesky-social/indigo/xrpc"
+	"github.com/gin-gonic/gin"
 )
 
 // documentation: https://github.com/bluesky-social/indigo/blob/2503553ea604ea7f0bfa6a021b284b371ac2ac96/xrpc/xrpc.go#L114
@@ -88,7 +89,7 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 		log.Printf("Fetched feed from /api/firebird/blusky using feed: %s", feedAtURI)
 	}
 
-	resultsList := skeetprocessor.SaveFeed(out, firestoreClient, nlpClient)
+	resultsList := processor.SaveFeed(out, firestoreClient, nlpClient)
 
 	c.JSON(http.StatusOK, resultsList)
 }

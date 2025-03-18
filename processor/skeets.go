@@ -1,4 +1,4 @@
-package skeetprocessor
+package processor
 
 import (
 	"context"
@@ -8,26 +8,15 @@ import (
 	"go-firebird/db"
 	"go-firebird/mlmodel"
 	"go-firebird/nlp"
+	"go-firebird/types"
 	"log"
 	"sync"
 
 	"cloud.google.com/go/firestore"
 	language "cloud.google.com/go/language/apiv2"
-	"go-firebird/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-type SaveSkeetResult struct {
-	SavedSkeetID         string          `json:"savedSkeetId"`
-	Content              string          `json:"content"`
-	NewLocationNames     []string        `json:"newLocationNames"`
-	ProcessedEntityCount int             `json:"processedEntityCount"`
-	Classification       []float64       `json:"classification"`
-	Sentiment            types.Sentiment `json:"sentiment"`
-	AlreadyExist         bool            `json:"alreadyExist"`
-	ErrorSaving          bool            `json:"errorSaving"`
-}
 
 // HashString hashes a given string using SHA-256.
 func HashString(s string) string {
@@ -35,8 +24,8 @@ func HashString(s string) string {
 	return hex.EncodeToString(h[:])
 }
 
-func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClient *language.Client) []SaveSkeetResult {
-	resultsChan := make(chan SaveSkeetResult, len(out.Feed))
+func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClient *language.Client) []types.SaveSkeetResult {
+	resultsChan := make(chan types.SaveSkeetResult, len(out.Feed))
 	var wg sync.WaitGroup
 
 	for _, v := range out.Feed {
@@ -55,7 +44,7 @@ func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClie
 				}
 				savedSkeetResult, err := SaveSkeet(newSkeet, firestoreClient, nlpClient)
 				if err != nil {
-					savedSkeetResult = SaveSkeetResult{
+					savedSkeetResult = types.SaveSkeetResult{
 						SavedSkeetID:         feedItem.Post.URI,
 						NewLocationNames:     nil,
 						ProcessedEntityCount: 0,
@@ -74,7 +63,7 @@ func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClie
 	wg.Wait()
 	close(resultsChan)
 
-	resultsList := make([]SaveSkeetResult, 0, len(out.Feed))
+	resultsList := make([]types.SaveSkeetResult, 0, len(out.Feed))
 	for result := range resultsChan {
 		resultsList = append(resultsList, result)
 	}
@@ -83,11 +72,11 @@ func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClie
 
 }
 
-func SaveSkeet(newSkeet types.Skeet, firestoreClient *firestore.Client, nlpClient *language.Client) (SaveSkeetResult, error) {
+func SaveSkeet(newSkeet types.Skeet, firestoreClient *firestore.Client, nlpClient *language.Client) (types.SaveSkeetResult, error) {
 	ctx := context.Background()
 	hashedSkeetID := db.HashString(newSkeet.UID)
 
-	var result SaveSkeetResult
+	var result types.SaveSkeetResult
 	result.SavedSkeetID = hashedSkeetID
 	result.Content = newSkeet.Content
 	result.AlreadyExist = false

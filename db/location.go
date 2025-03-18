@@ -18,6 +18,7 @@ func GetValidLocations(client *firestore.Client) ([]types.LocationData, error) {
 	// Query all valid documents
 	docs, err := client.Collection("locations").
 		Where("formattedAddress", "!=", ""). // processed to be invalid
+		// Limit(100).                          // fuck it, we ball
 		Documents(ctx).
 		GetAll()
 	if err != nil {

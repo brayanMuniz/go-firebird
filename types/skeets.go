@@ -1,5 +1,16 @@
 package types
 
+type SaveSkeetResult struct {
+	SavedSkeetID         string    `json:"savedSkeetId"`
+	Content              string    `json:"content"`
+	NewLocationNames     []string  `json:"newLocationNames"`
+	ProcessedEntityCount int       `json:"processedEntityCount"`
+	Classification       []float64 `json:"classification"`
+	Sentiment            Sentiment `json:"sentiment"`
+	AlreadyExist         bool      `json:"alreadyExist"`
+	ErrorSaving          bool      `json:"errorSaving"`
+}
+
 // Skeet represents a post stored in Firestore
 type Skeet struct {
 	Avatar         string    `firestore:"avatar"`
