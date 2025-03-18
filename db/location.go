@@ -86,6 +86,23 @@ func UpdateLocSentimentTimestampWithData(client *firestore.Client, locationData 
 	return err
 }
 
+func AddNewLocSentimentAvg(client *firestore.Client, locationDocID string, updatedList []types.AvgLocationSentiment) error {
+	ctx := context.Background()
+	locDoc := client.Collection("locations").Doc(locationDocID)
+
+	unionItems := make([]interface{}, len(updatedList))
+	for i, v := range updatedList {
+		unionItems[i] = v
+	}
+
+	// could have used set since I am just gettingt them all and updating locally, but idk man that scares me
+	_, err := locDoc.Set(ctx, map[string]interface{}{
+		"avgSentimentList": firestore.ArrayUnion(unionItems...),
+	}, firestore.MergeAll)
+
+	return err
+}
+
 func GetSkeetsSubCollection(client *firestore.Client, locationDocID string, start, end string) ([]types.SkeetSubDoc, error) {
 	ctx := context.Background()
 	var skeets []types.SkeetSubDoc
@@ -114,6 +131,28 @@ func GetSkeetsSubCollection(client *firestore.Client, locationDocID string, star
 
 	return skeets, nil
 
+}
+
+func GetLatestSkeetInSubCollection(client *firestore.Client, locationDocID string) (types.SkeetSubDoc, error) {
+	ctx := context.Background()
+	var latestSkeet types.SkeetSubDoc
+
+	docs, err := client.Collection("locations").
+		Doc(locationDocID).
+		Collection("skeetIds").
+		OrderBy("skeetData.timestamp", firestore.Desc). // latest first
+		Limit(1).Documents(ctx).GetAll()
+	if err != nil {
+		return latestSkeet, fmt.Errorf("error executing query: %w", err)
+	}
+
+	if len(docs) == 0 {
+		return latestSkeet, fmt.Errorf("no skeets found in subcollection for location %s", locationDocID)
+	}
+	if err := docs[0].DataTo(&latestSkeet); err != nil {
+		return latestSkeet, fmt.Errorf("error converting document to SkeetSubDoc: %w", err)
+	}
+	return latestSkeet, nil
 }
 
 func GetNewLocations(client *firestore.Client) ([]types.LocationData, error) {

@@ -3,7 +3,6 @@ package nlp
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"go-firebird/types"
 	"log"
@@ -119,7 +118,7 @@ func CloseLanguageClient() {
 	}
 }
 
-func ComputeSimpleAverageSentiment(skeets []types.SkeetSubDoc) (float32, error) {
+func ComputeSimpleAverageSentiment(skeets []types.SkeetSubDoc) float32 {
 	var totalScore float32
 	count := 0
 
@@ -129,8 +128,8 @@ func ComputeSimpleAverageSentiment(skeets []types.SkeetSubDoc) (float32, error) 
 	}
 
 	if count == 0 {
-		return 0, errors.New("no skeets provided")
+		return 0
 	}
 
-	return totalScore / float32(count), nil
+	return totalScore / float32(count)
 }

@@ -49,15 +49,15 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 			Feed: []types.FeedEntry{
 				{
 					Post: types.Post{
-						URI: "mock:uri:8",
+						URI: "mock:uri:12",
 						Author: types.Author{
 							Avatar:      "https://example.com/avatar.png",
 							Handle:      "testhandle",
 							DisplayName: "Test User",
 						},
 						Record: types.Record{
-							Text:      "Bushfire Cowlands Rd, Greenwald Status: bad",
-							CreatedAt: "2025-03-14T00:00:00Z",
+							Text:      "Houston. hurricane BAD!",
+							CreatedAt: time.Now().UTC().Format(time.RFC3339),
 						},
 					},
 				},

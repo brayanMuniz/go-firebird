@@ -7,6 +7,7 @@ import (
 	"go-firebird/types"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -16,18 +17,24 @@ import (
 func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Client) {
 
 	allGood := true
-	testLocationId := c.Query("docId")
+	testLocationId := strings.TrimSpace(c.Query("docId"))
 	if testLocationId != "" {
 		start := "1970-01-01T00:00:00Z" // big bang of computers
 		end := time.Now().UTC().Format(time.RFC3339)
 
-		fmt.Println("Running avg sentiment on docId: %s", testLocationId)
+		log.Printf("Running avg sentiment on docId: %s", testLocationId)
+		log.Printf("Using range %v | %v", start, end)
+
 		locationData, err := db.GetValidLocation(firestoreClient, testLocationId)
 		if err != nil {
-			log.Printf("Error fetching valid locations: %v", err)
+			log.Printf("Error fetching valid location: %v", err)
+			return
 		}
+		log.Printf("Location name: %v", locationData.FormattedAddress)
 
 		if len(locationData.AvgSentimentList) == 0 {
+			fmt.Println()
+			log.Printf("Sentiment list is empty. Will INIT")
 			skeets, err := db.GetSkeetsSubCollection(firestoreClient, testLocationId, start, end)
 			if err != nil {
 				log.Printf("Error fetching skeets subcollection: %v", err)
@@ -35,12 +42,7 @@ func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Clie
 			}
 			fmt.Printf("Fetched %d skeets\n", len(skeets))
 
-			avg, err := nlp.ComputeSimpleAverageSentiment(skeets)
-			if err != nil {
-				log.Printf("Error fetching skeets subcollection: %v", err)
-				return
-			}
-
+			avg := nlp.ComputeSimpleAverageSentiment(skeets)
 			newSentiment := types.AvgLocationSentiment{
 				TimeStamp:        end,
 				SkeetsAmount:     len(skeets),
@@ -56,15 +58,42 @@ func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Clie
 			}
 
 		} else {
-			// TODO: check if there are any new skeets
-			// if there are calculate the new sentiment average and add a new one to the list
-			// else update the most recent sentiment with a new timestamp
-
-			log.Printf("Sentiment list is not empty, will not INIT")
-			err := db.UpdateLocSentimentTimestampWithData(firestoreClient, locationData, testLocationId, end)
+			log.Printf("Sentiment list is not empty")
+			latestSentiment := locationData.AvgSentimentList[len(locationData.AvgSentimentList)-1]
+			newSkeets, err := db.GetSkeetsSubCollection(firestoreClient, testLocationId, latestSentiment.TimeStamp, end)
 			if err != nil {
-				log.Printf("Failed to update avgLocation field")
+				log.Printf("Failed to get skeets subcolleciton", err)
 			}
+
+			if len(newSkeets) > 0 {
+				log.Printf("New skeets to average. Adding new average")
+				newSkeetsAvg := nlp.ComputeSimpleAverageSentiment(newSkeets)
+				newAvg := ((latestSentiment.AverageSentiment * float32(latestSentiment.SkeetsAmount)) + newSkeetsAvg) / ((float32(latestSentiment.SkeetsAmount)) + float32(len(newSkeets)))
+
+				newSentiment := types.AvgLocationSentiment{
+					TimeStamp:        end,
+					SkeetsAmount:     latestSentiment.SkeetsAmount + len(newSkeets),
+					AverageSentiment: newAvg,
+				}
+				log.Printf("TimeStamp is: %v", newSentiment.TimeStamp)
+				log.Printf("Skeets amount is: %v", newSentiment.SkeetsAmount)
+				log.Printf("Average is: %v", newSentiment.AverageSentiment)
+
+				locationData.AvgSentimentList = append(locationData.AvgSentimentList, newSentiment)
+				e := db.AddNewLocSentimentAvg(firestoreClient, testLocationId, locationData.AvgSentimentList)
+				if e != nil {
+					log.Printf("Failed to add new avgLocation.", e)
+				}
+				log.Printf("Added new average to list")
+
+			} else {
+				log.Printf("Updating timestamp of latest sentiment")
+				e := db.UpdateLocSentimentTimestampWithData(firestoreClient, locationData, testLocationId, end)
+				if e != nil {
+					log.Printf("Failed to update avgLocation field")
+				}
+			}
+
 		}
 
 	} else {
