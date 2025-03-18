@@ -12,7 +12,7 @@ type LocationData struct {
 type AvgLocationSentiment struct {
 	TimeStamp        string  `firestore:"timeStamp"`
 	SkeetsAmount     int     `firestore:"skeetsAmount"`
-	AverageSentiment float64 `firestore:"averageSentiment"`
+	AverageSentiment float32 `firestore:"averageSentiment"`
 }
 
 type NewLocationMetaData struct {

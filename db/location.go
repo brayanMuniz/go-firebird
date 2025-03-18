@@ -38,11 +38,11 @@ func GetValidLocations(client *firestore.Client) ([]types.LocationData, error) {
 }
 
 // single valid location based on id
-func GetValidLocation(client *firestore.Client, locId string) (types.LocationData, error) {
+func GetValidLocation(client *firestore.Client, locationDocID string) (types.LocationData, error) {
 	ctx := context.Background()
 	var locationData types.LocationData
 
-	doc, err := client.Collection("locations").Doc(locId).Get(ctx)
+	doc, err := client.Collection("locations").Doc(locationDocID).Get(ctx)
 	if err != nil {
 		return locationData, err
 	}
@@ -51,6 +51,39 @@ func GetValidLocation(client *firestore.Client, locId string) (types.LocationDat
 		return locationData, err
 	}
 	return locationData, nil
+}
+
+// since its the first one, use set
+func InitLocationSentiment(client *firestore.Client, locationDocID string, newAvgSentiment types.AvgLocationSentiment) error {
+	ctx := context.Background()
+	locDoc := client.Collection("locations").Doc(locationDocID)
+	data := map[string]interface{}{
+		"avgSentimentList": []types.AvgLocationSentiment{newAvgSentiment},
+	}
+	_, err := locDoc.Set(ctx, data, firestore.MergeAll)
+	return err
+}
+
+// update the most recent object in the avgSentimentList to indicate that no new skeets were needed to be processed
+func UpdateLocSentimentTimestampWithData(client *firestore.Client, locationData types.LocationData, locationDocID, newTime string) error {
+	// Ensure there's at least one sentiment record.
+	if len(locationData.AvgSentimentList) == 0 {
+		return fmt.Errorf("AvgSentimentList is empty, cannot update timestamp")
+	}
+
+	// Update the timestamp of the most recent sentiment record.
+	lastIndex := len(locationData.AvgSentimentList) - 1
+	locationData.AvgSentimentList[lastIndex].TimeStamp = newTime
+
+	// Prepare update data.
+	updateData := map[string]interface{}{
+		"avgSentimentList": locationData.AvgSentimentList,
+	}
+
+	ctx := context.Background()
+	locDocRef := client.Collection("locations").Doc(locationDocID)
+	_, err := locDocRef.Set(ctx, updateData, firestore.MergeAll)
+	return err
 }
 
 func GetSkeetsSubCollection(client *firestore.Client, locationDocID string, start, end string) ([]types.SkeetSubDoc, error) {

@@ -1,17 +1,21 @@
 package handlers
 
 import (
-	"cloud.google.com/go/firestore"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"go-firebird/db"
 	"go-firebird/nlp"
+	"go-firebird/types"
 	"log"
 	"net/http"
 	"time"
+
+	"cloud.google.com/go/firestore"
+	"github.com/gin-gonic/gin"
 )
 
 func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Client) {
+
+	allGood := true
 	testLocationId := c.Query("docId")
 	if testLocationId != "" {
 		start := "1970-01-01T00:00:00Z" // big bang of computers
@@ -36,10 +40,31 @@ func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Clie
 				log.Printf("Error fetching skeets subcollection: %v", err)
 				return
 			}
-			// TODO: 1. update the document with the new avg sentiment and all the fields
-			log.Printf("Average is: %v", avg)
+
+			newSentiment := types.AvgLocationSentiment{
+				TimeStamp:        end,
+				SkeetsAmount:     len(skeets),
+				AverageSentiment: avg,
+			}
+			log.Printf("TimeStamp is: %v", newSentiment.TimeStamp)
+			log.Printf("Skeets amount is: %v", newSentiment.SkeetsAmount)
+			log.Printf("Average is: %v", newSentiment.AverageSentiment)
+			newLocationErr := db.InitLocationSentiment(firestoreClient, testLocationId, newSentiment)
+			if newLocationErr != nil {
+				log.Printf("Error adding new location sentiment")
+				allGood = false
+			}
 
 		} else {
+			// TODO: check if there are any new skeets
+			// if there are calculate the new sentiment average and add a new one to the list
+			// else update the most recent sentiment with a new timestamp
+
+			log.Printf("Sentiment list is not empty, will not INIT")
+			err := db.UpdateLocSentimentTimestampWithData(firestoreClient, locationData, testLocationId, end)
+			if err != nil {
+				log.Printf("Failed to update avgLocation field")
+			}
 		}
 
 	} else {
@@ -51,7 +76,7 @@ func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Clie
 			return
 		}
 
-		// TODO:2: do the same as the test one but on ALL valid documents
+		// TODO: 2: do the same as the test one but on ALL valid documents
 		for _, v := range validLocations {
 			l := len(v.AvgSentimentList)
 			if l == 0 {
@@ -63,8 +88,9 @@ func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Clie
 		}
 
 	}
+
 	mock := map[string]interface{}{
-		"data": true,
+		"data": allGood,
 	}
 
 	// Return JSON
