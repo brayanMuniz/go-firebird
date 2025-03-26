@@ -11,6 +11,15 @@ type SaveSkeetResult struct {
 	ErrorSaving          bool      `json:"errorSaving"`
 }
 
+type Category string
+
+const (
+	Wildfire    Category = "wildfire"
+	Hurricane   Category = "hurricane"
+	Earthquake  Category = "earthquake"
+	NonDisaster Category = "non-disaster"
+)
+
 // Skeet represents a post stored in Firestore
 type Skeet struct {
 	Avatar         string    `firestore:"avatar"`

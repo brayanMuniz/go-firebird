@@ -24,6 +24,32 @@ func HashString(s string) string {
 	return hex.EncodeToString(h[:])
 }
 
+func GetCategory(s types.Skeet) types.Category {
+	maxProb := 0.00
+	maxIdx := 0
+	for i, prob := range s.Classification {
+		if prob > maxProb {
+			maxProb = prob
+			maxIdx = i
+		}
+	}
+
+	c := types.NonDisaster
+	switch maxIdx {
+	case 0:
+		c = types.Wildfire
+	case 1:
+		c = types.Hurricane
+	case 2:
+		c = types.Earthquake
+	default:
+		c = types.NonDisaster
+	}
+
+	return c
+
+}
+
 func SaveFeed(out types.FeedResponse, firestoreClient *firestore.Client, nlpClient *language.Client) []types.SaveSkeetResult {
 	resultsChan := make(chan types.SaveSkeetResult, len(out.Feed))
 	var wg sync.WaitGroup

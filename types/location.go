@@ -9,10 +9,18 @@ type LocationData struct {
 	AvgSentimentList []AvgLocationSentiment `firestore:"avgSentimentList"`
 }
 
+type DisasterCount struct {
+	FireCount        int `firestore:"fireCount"`
+	HurricaneCount   int `firestore:"hurricaneCount"`
+	EarthquakeCount  int `firestore:"earthquakeCount"`
+	NonDisasterCount int `firestore:"nonDisasterCount"`
+}
+
 type AvgLocationSentiment struct {
-	TimeStamp        string  `firestore:"timeStamp"`
-	SkeetsAmount     int     `firestore:"skeetsAmount"`
-	AverageSentiment float32 `firestore:"averageSentiment"`
+	TimeStamp        string        `firestore:"timeStamp"`
+	SkeetsAmount     int           `firestore:"skeetsAmount"`
+	AverageSentiment float32       `firestore:"averageSentiment"`
+	DisasterCount    DisasterCount `firestore:"disasterCount"`
 }
 
 type NewLocationMetaData struct {

@@ -181,6 +181,12 @@ func GetNewLocations(client *firestore.Client) ([]types.LocationData, error) {
 	return newLocations, nil
 }
 
+// TODO: complete this function
+func UpdateLatestSentimentNewCount(client *firestore.Client, locationData types.LocationData, locationID string, newCount types.DisasterCount) error {
+	return nil
+
+}
+
 func UpdateLocationGeocoding(client *firestore.Client, locationName string) {
 	hashedLocationID := HashString(locationName)
 	results, err := geocode.GeocodeAddress(locationName)

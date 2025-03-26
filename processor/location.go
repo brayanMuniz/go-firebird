@@ -43,11 +43,32 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 		}
 		addLog("Fetched %d skeets", len(skeets))
 
+		// compute the total count and add it to the field
+		dCount := types.DisasterCount{}
+		for _, v := range skeets {
+			switch GetCategory(v.SkeetData) {
+			case types.Wildfire:
+				dCount.FireCount += 1
+			case types.Earthquake:
+				dCount.EarthquakeCount += 1
+			case types.Hurricane:
+				dCount.HurricaneCount += 1
+			case types.NonDisaster:
+				dCount.NonDisasterCount += 1
+			}
+		}
+
+		addLog("FireCount: %v", dCount.FireCount)
+		addLog("EarthquakeCount: %v", dCount.EarthquakeCount)
+		addLog("HurricaneCount: %v", dCount.HurricaneCount)
+		addLog("NonDisasterCount: %v", dCount.NonDisasterCount)
+
 		avg := nlp.ComputeSimpleAverageSentiment(skeets)
 		newSentiment := types.AvgLocationSentiment{
 			TimeStamp:        end,
 			SkeetsAmount:     len(skeets),
 			AverageSentiment: avg,
+			DisasterCount:    dCount,
 		}
 
 		addLog("TimeStamp is: %v", newSentiment.TimeStamp)
@@ -71,8 +92,59 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 			return err
 		}
 
+		// since this is a new field, you would have to check if the latestSentiment has the newfield, if it does not, fetch all the skeets.
+		newDisasterCount := latestSentiment.DisasterCount
+		if newDisasterCount.FireCount == 0 && newDisasterCount.EarthquakeCount == 0 && newDisasterCount.HurricaneCount == 0 && newDisasterCount.NonDisasterCount == 0 {
+			addLog("This location does not have count field. Fetching all locations. ")
+			allSkeets, err := db.GetSkeetsSubCollection(firestoreClient, locationID, start, end)
+			if err != nil {
+				addLog("Failed to get all skeets subcollection: %v", err)
+				return err
+			}
+
+			// compute the total count and add it to the field
+			dCount := types.DisasterCount{}
+			for _, v := range allSkeets {
+				switch GetCategory(v.SkeetData) {
+				case types.Wildfire:
+					dCount.FireCount += 1
+				case types.Earthquake:
+					dCount.EarthquakeCount += 1
+				case types.Hurricane:
+					dCount.HurricaneCount += 1
+				case types.NonDisaster:
+					dCount.NonDisasterCount += 1
+				}
+			}
+
+			newDisasterCount = dCount
+
+			// TODO: update the document
+			// db.UpdateLatestSentimentNewCount()
+
+		} else {
+			addLog("This location does have count field. Caculating new count")
+			for _, v := range newSkeets {
+				switch GetCategory(v.SkeetData) {
+				case types.Wildfire:
+					newDisasterCount.FireCount += 1
+				case types.Earthquake:
+					newDisasterCount.EarthquakeCount += 1
+				case types.Hurricane:
+					newDisasterCount.HurricaneCount += 1
+				case types.NonDisaster:
+					newDisasterCount.NonDisasterCount += 1
+				}
+			}
+		}
+
+		addLog("FireCount: %v", newDisasterCount.FireCount)
+		addLog("EarthquakeCount: %v", newDisasterCount.EarthquakeCount)
+		addLog("HurricaneCount: %v", newDisasterCount.HurricaneCount)
+		addLog("NonDisasterCount: %v", newDisasterCount.NonDisasterCount)
+
 		if len(newSkeets) > 0 {
-			addLog("New skeets to average. Adding new average")
+			addLog("New skeets! Adding new entry")
 			newSkeetsAvg := nlp.ComputeSimpleAverageSentiment(newSkeets)
 			newAvg := ((latestSentiment.AverageSentiment * float32(latestSentiment.SkeetsAmount)) + newSkeetsAvg) / ((float32(latestSentiment.SkeetsAmount)) + float32(len(newSkeets)))
 
@@ -80,6 +152,7 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 				TimeStamp:        end,
 				SkeetsAmount:     latestSentiment.SkeetsAmount + len(newSkeets),
 				AverageSentiment: newAvg,
+				DisasterCount:    newDisasterCount,
 			}
 			addLog("TimeStamp is: %v", newSentiment.TimeStamp)
 			addLog("Skeets amount is: %v", newSentiment.SkeetsAmount)
@@ -95,7 +168,7 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 			addLog("Added new average to list")
 
 		} else {
-			addLog("No new skeets to average")
+			addLog("No new skeets")
 			addLog("Updating timestamp of latest sentiment")
 			e := db.UpdateLocSentimentTimestampWithData(firestoreClient, locationData, locationID, end)
 			if e != nil {
