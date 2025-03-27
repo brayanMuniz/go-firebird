@@ -224,7 +224,6 @@ func GetTopLocationsBySkeetAmount(client *firestore.Client, limit int) ([]types.
 	var topLocations []types.LocationData
 
 	query := client.Collection("locations").
-		Where("formattedAddress", "!=", "").
 		OrderBy("latestSkeetsAmount", firestore.Desc).
 		Limit(limit)
 

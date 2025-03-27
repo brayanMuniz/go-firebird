@@ -1,12 +1,30 @@
 package handlers
 
 import (
+	"go-firebird/db"
+	"go-firebird/types"
+	"log"
+	"net/http"
+
 	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 )
 
-// TODO: make db request that will return the 10 highest location. use latestsentiment last entry to get skeetsAmount
-// Will first have to modify the schema to house a new field
 func TestGetActiveLocation(c *gin.Context, firestoreClient *firestore.Client) {
+	limit := 10
+	locDocs, err := db.GetTopLocationsBySkeetAmount(firestoreClient, limit)
+	if err != nil {
+		log.Printf("ERROR fetching top locations: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve top locations",
+		})
+		return
+	}
+
+	if locDocs == nil {
+		locDocs = []types.LocationData{}
+	}
+
+	c.JSON(http.StatusOK, locDocs)
 
 }
