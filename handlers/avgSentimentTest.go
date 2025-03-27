@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"cloud.google.com/go/firestore"
-	"github.com/gin-gonic/gin"
 	"go-firebird/db"
 	"go-firebird/processor"
 	"go-firebird/types"
@@ -10,6 +8,9 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"cloud.google.com/go/firestore"
+	"github.com/gin-gonic/gin"
 )
 
 func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Client) {
@@ -18,7 +19,13 @@ func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Clie
 
 	testLocationId := strings.TrimSpace(c.Query("docId"))
 	if testLocationId != "" {
-		err := processor.ProcessLocationAvgSentiment(firestoreClient, testLocationId)
+		locData, e := db.GetValidLocation(firestoreClient, testLocationId)
+		if e != nil {
+			log.Printf("Error fetching the test location doc", e)
+			failureSaving = append(failureSaving, testLocationId)
+		}
+
+		err := processor.ProcessLocationAvgSentiment(firestoreClient, testLocationId, locData)
 		if err != nil {
 			log.Printf("Error processing the location average sentiment save: %v", err)
 			failureSaving = append(failureSaving, testLocationId)
@@ -44,7 +51,7 @@ func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Clie
 				defer wg.Done()
 
 				docId := db.HashString(locData.LocationName)
-				if err := processor.ProcessLocationAvgSentiment(firestoreClient, docId); err != nil {
+				if err := processor.ProcessLocationAvgSentiment(firestoreClient, docId, locData); err != nil {
 					log.Printf("Error processing the location average sentiment save: %v", err)
 					mu.Lock()
 					failureSaving = append(failureSaving, docId)
@@ -53,8 +60,8 @@ func TestLocationSentimentUpdate(c *gin.Context, firestoreClient *firestore.Clie
 					mu.Lock()
 					goodSaving = append(goodSaving, docId)
 					mu.Unlock()
-
 				}
+
 			}(locData)
 		}
 

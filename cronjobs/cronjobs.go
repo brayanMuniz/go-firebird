@@ -44,7 +44,7 @@ func scheduleLocationSentimentUpdate(firestoreClient *firestore.Client) {
 
 			// Use a hash of the location name as the document ID.
 			docId := db.HashString(location.LocationName)
-			if err := processor.ProcessLocationAvgSentiment(firestoreClient, docId); err != nil {
+			if err := processor.ProcessLocationAvgSentiment(firestoreClient, docId, locData); err != nil {
 				log.Printf("Error processing location %s: %v", docId, err)
 				mu.Lock()
 				failureSaving = append(failureSaving, docId)

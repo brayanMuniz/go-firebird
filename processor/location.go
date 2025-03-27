@@ -12,7 +12,7 @@ import (
 	"cloud.google.com/go/firestore"
 )
 
-func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID string) error {
+func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID string, locationData types.LocationData) error {
 	// NOTE: this right here is my religion
 	var logBuilder strings.Builder
 	addLog := func(format string, args ...interface{}) {
@@ -22,13 +22,6 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 
 	start := "1970-01-01T00:00:00Z" // big bang of computers
 	end := time.Now().UTC().Format(time.RFC3339)
-
-	locationData, err := db.GetValidLocation(firestoreClient, locationID)
-	if err != nil {
-		addLog("Error fetching valid location: %v", err)
-		log.Println(logBuilder.String())
-		return err
-	}
 
 	addLog("Running avg sentiment on docId %v | Location name: %v", locationID, locationData.FormattedAddress)
 
@@ -79,6 +72,16 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 			addLog("Error adding new location sentiment: %v", newLocationErr)
 			log.Println(logBuilder.String())
 			return err
+		}
+
+		// Update latestSkeetsAmount after successful init
+		errUpdate := db.UpdateLocationFields(firestoreClient, locationID, map[string]interface{}{
+			"latestSkeetsAmount": newSentiment.SkeetsAmount,
+		})
+		if errUpdate != nil {
+			addLog("Warning: Failed to update latestSkeetsAmount after init: %v", errUpdate)
+		} else {
+			addLog("Updated latestSkeetsAmount after init.")
 		}
 
 	} else {
@@ -179,6 +182,14 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 				return err
 			}
 			addLog("Added new average to list")
+
+			errUpdate := db.UpdateLocationFields(firestoreClient, locationID, map[string]interface{}{
+				"latestSkeetsAmount": newSentiment.DisasterCount,
+			})
+			if errUpdate != nil {
+				addLog("Failed to add new avgLocation: %v", e)
+				log.Println(logBuilder.String())
+			}
 
 		} else {
 			addLog("No new skeets")

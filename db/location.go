@@ -207,6 +207,49 @@ func UpdateLocationSentimentList(client *firestore.Client, locationID string, up
 	return nil
 }
 
+// UpdateLocationFields updates specific top-level fields using a map.
+func UpdateLocationFields(client *firestore.Client, locationID string, fieldsToUpdate map[string]interface{}) error {
+	ctx := context.Background()
+	locDocRef := client.Collection("locations").Doc(locationID)
+
+	_, err := locDocRef.Set(ctx, fieldsToUpdate, firestore.MergeAll)
+	if err != nil {
+		return fmt.Errorf("failed to update fields for location %s: %w", locationID, err)
+	}
+	return nil
+}
+
+func GetTopLocationsBySkeetAmount(client *firestore.Client, limit int) ([]types.LocationData, error) {
+	ctx := context.Background()
+	var topLocations []types.LocationData
+
+	query := client.Collection("locations").
+		Where("formattedAddress", "!=", "").
+		OrderBy("latestSkeetsAmount", firestore.Desc).
+		Limit(limit)
+
+	iter := query.Documents(ctx)
+	defer iter.Stop() // Ensure iterator resources are released
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break // End of results
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error iterating top locations: %w", err)
+		}
+
+		var location types.LocationData
+		if err := doc.DataTo(&location); err != nil {
+			return nil, fmt.Errorf("error converting document %s to LocationData: %w", doc.Ref.ID, err)
+		}
+		topLocations = append(topLocations, location)
+	}
+
+	return topLocations, nil
+}
+
 func UpdateLocationGeocoding(client *firestore.Client, locationName string) {
 	hashedLocationID := HashString(locationName)
 	results, err := geocode.GeocodeAddress(locationName)

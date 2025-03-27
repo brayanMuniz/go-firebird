@@ -46,6 +46,10 @@ func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client, 
 		handlers.TestLocationSentimentUpdate(c, firestoreClient)
 	})
 
+	r.GET("/api/testing/getActiveLocations", func(c *gin.Context) {
+		handlers.TestGetActiveLocation(c, firestoreClient)
+	})
+
 	// api routes
 	api := r.Group("/api/firebird")
 	{
