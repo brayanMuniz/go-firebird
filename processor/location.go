@@ -184,11 +184,12 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 			addLog("Added new average to list")
 
 			errUpdate := db.UpdateLocationFields(firestoreClient, locationID, map[string]interface{}{
-				"latestSkeetsAmount": newSentiment.DisasterCount,
+				"latestSkeetsAmount": newSentiment.SkeetsAmount,
 			})
 			if errUpdate != nil {
-				addLog("Failed to add new avgLocation: %v", e)
+				addLog("Failed to update location fields: %v", errUpdate)
 				log.Println(logBuilder.String())
+				return errUpdate
 			}
 
 		} else {
