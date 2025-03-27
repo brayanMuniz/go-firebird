@@ -18,7 +18,7 @@ func GetValidLocations(client *firestore.Client) ([]types.LocationData, error) {
 	// Query all valid documents
 	docs, err := client.Collection("locations").
 		Where("formattedAddress", "!=", ""). // processed to be invalid
-		// Limit(100).                          // fuck it, we ball
+		// Limit(5).                            // fuck it, we ball
 		Documents(ctx).
 		GetAll()
 	if err != nil {
@@ -181,10 +181,30 @@ func GetNewLocations(client *firestore.Client) ([]types.LocationData, error) {
 	return newLocations, nil
 }
 
-// TODO: complete this function
-func UpdateLatestSentimentNewCount(client *firestore.Client, locationData types.LocationData, locationID string, newCount types.DisasterCount) error {
+func UpdateLocationDoc(client *firestore.Client, locationID string, locationData types.LocationData) error {
+	ctx := context.Background()
+	locDoc := client.Collection("locations").Doc(locationID)
+	_, err := locDoc.Set(ctx, locationData, firestore.MergeAll)
+	if err != nil {
+		return fmt.Errorf("failed to update location document %s: %w", locationID, err)
+	}
 	return nil
+}
 
+// UpdateLocationSentimentList replaces the entire avgSentimentList field with the provided list.
+func UpdateLocationSentimentList(client *firestore.Client, locationID string, updatedList []types.AvgLocationSentiment) error {
+	ctx := context.Background()
+	locDocRef := client.Collection("locations").Doc(locationID)
+
+	updates := []firestore.Update{
+		{Path: "avgSentimentList", Value: updatedList},
+	}
+
+	_, err := locDocRef.Update(ctx, updates)
+	if err != nil {
+		return fmt.Errorf("failed to update avgSentimentList for %s: %w", locationID, err)
+	}
+	return nil
 }
 
 func UpdateLocationGeocoding(client *firestore.Client, locationName string) {

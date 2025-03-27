@@ -13,7 +13,6 @@ import (
 )
 
 func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID string) error {
-	// Helper function to append a formatted log message.
 	// NOTE: this right here is my religion
 	var logBuilder strings.Builder
 	addLog := func(format string, args ...interface{}) {
@@ -95,7 +94,7 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 		// since this is a new field, you would have to check if the latestSentiment has the newfield, if it does not, fetch all the skeets.
 		newDisasterCount := latestSentiment.DisasterCount
 		if newDisasterCount.FireCount == 0 && newDisasterCount.EarthquakeCount == 0 && newDisasterCount.HurricaneCount == 0 && newDisasterCount.NonDisasterCount == 0 {
-			addLog("This location does not have count field. Fetching all locations. ")
+			addLog("This location does not have count field. Fetching all skeets. ")
 			allSkeets, err := db.GetSkeetsSubCollection(firestoreClient, locationID, start, end)
 			if err != nil {
 				addLog("Failed to get all skeets subcollection: %v", err)
@@ -119,8 +118,16 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 
 			newDisasterCount = dCount
 
-			// TODO: update the document
-			// db.UpdateLatestSentimentNewCount()
+			// update the document
+			latestSentiment.DisasterCount = newDisasterCount
+			locationData.AvgSentimentList[len(locationData.AvgSentimentList)-1] = latestSentiment
+			e := db.UpdateLocationSentimentList(firestoreClient, locationID, locationData.AvgSentimentList)
+			if e != nil {
+				addLog("Failed to update location sentiment list with new count: %v", e)
+				log.Println(logBuilder.String())
+				return e
+			}
+			addLog("Successfully updated latest sentiment with backfilled counts.")
 
 		} else {
 			addLog("This location does have count field. Caculating new count")
@@ -154,9 +161,15 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 				AverageSentiment: newAvg,
 				DisasterCount:    newDisasterCount,
 			}
+			totalDisasterCount := newDisasterCount.FireCount + newDisasterCount.HurricaneCount + newDisasterCount.EarthquakeCount + newDisasterCount.NonDisasterCount
+			if newSentiment.SkeetsAmount < (totalDisasterCount) {
+				newSentiment.SkeetsAmount = totalDisasterCount
+				addLog("Skeets Amount is behind totalDisaster. Updating")
+			}
 			addLog("TimeStamp is: %v", newSentiment.TimeStamp)
 			addLog("Skeets amount is: %v", newSentiment.SkeetsAmount)
 			addLog("Average is: %v", newSentiment.AverageSentiment)
+			addLog("Total Disaster count is: %v", totalDisasterCount)
 
 			locationData.AvgSentimentList = append(locationData.AvgSentimentList, newSentiment)
 			e := db.AddNewLocSentimentAvg(firestoreClient, locationID, locationData.AvgSentimentList)
