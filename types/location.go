@@ -1,13 +1,15 @@
 package types
 
 type LocationData struct {
-	LocationName       string                 `firestore:"locationName"`
-	FormattedAddress   string                 `firestore:"formattedAddress"`
-	Lat                float64                `firestore:"lat"`
-	Long               float64                `firestore:"long"`
-	Type               string                 `firestore:"type"`
-	AvgSentimentList   []AvgLocationSentiment `firestore:"avgSentimentList"`
-	LatestSkeetsAmount int                    `firestore:"latestSkeetsAmount"`
+	LocationName        string                 `firestore:"locationName"`
+	FormattedAddress    string                 `firestore:"formattedAddress"`
+	Lat                 float64                `firestore:"lat"`
+	Long                float64                `firestore:"long"`
+	Type                string                 `firestore:"type"`
+	AvgSentimentList    []AvgLocationSentiment `firestore:"avgSentimentList"`
+	LatestSkeetsAmount  int                    `firestore:"latestSkeetsAmount"`
+	LatestDisasterCount DisasterCount          `firestore:"latestDisasterCount"`
+	LatestSentiment     float32                `firestore:"latestSentiment"`
 }
 
 type DisasterCount struct {

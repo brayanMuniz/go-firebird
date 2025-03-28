@@ -76,7 +76,9 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 
 		// Update latestSkeetsAmount after successful init
 		errUpdate := db.UpdateLocationFields(firestoreClient, locationID, map[string]interface{}{
-			"latestSkeetsAmount": newSentiment.SkeetsAmount,
+			"latestSkeetsAmount":  newSentiment.SkeetsAmount,
+			"latestDisasterCount": newSentiment.DisasterCount,
+			"latestSentiment":     newSentiment.AverageSentiment,
 		})
 		if errUpdate != nil {
 			addLog("Warning: Failed to update latestSkeetsAmount after init: %v", errUpdate)
@@ -184,7 +186,9 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 			addLog("Added new average to list")
 
 			errUpdate := db.UpdateLocationFields(firestoreClient, locationID, map[string]interface{}{
-				"latestSkeetsAmount": newSentiment.SkeetsAmount,
+				"latestSkeetsAmount":  newSentiment.SkeetsAmount,
+				"latestDisasterCount": newSentiment.DisasterCount,
+				"latestSentiment":     newSentiment.AverageSentiment,
 			})
 			if errUpdate != nil {
 				addLog("Failed to update location fields: %v", errUpdate)
