@@ -10,6 +10,8 @@ type LocationData struct {
 	LatestSkeetsAmount  int                    `firestore:"latestSkeetsAmount"`
 	LatestDisasterCount DisasterCount          `firestore:"latestDisasterCount"`
 	LatestSentiment     float32                `firestore:"latestSentiment"`
+	FirstSkeetTimestamp string                 `firestore:"firstSkeetTimestamp,omitempty"`
+	LastSkeetTimestamp  string                 `firestore:"lastSkeetTimestamp,omitempty"`
 }
 
 type DisasterCount struct {

@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"cloud.google.com/go/firestore"
 	"fmt"
 	"go-firebird/db"
 	"go-firebird/nlp"
@@ -8,8 +9,6 @@ import (
 	"log"
 	"strings"
 	"time"
-
-	"cloud.google.com/go/firestore"
 )
 
 func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID string, locationData types.LocationData) error {
@@ -74,11 +73,13 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 			return err
 		}
 
-		// Update latestSkeetsAmount after successful init
+		// Update top level fields
 		errUpdate := db.UpdateLocationFields(firestoreClient, locationID, map[string]interface{}{
 			"latestSkeetsAmount":  newSentiment.SkeetsAmount,
 			"latestDisasterCount": newSentiment.DisasterCount,
 			"latestSentiment":     newSentiment.AverageSentiment,
+			"firstSkeetTimestamp": newSentiment.TimeStamp,
+			"lastSkeetTimestamp":  newSentiment.TimeStamp,
 		})
 		if errUpdate != nil {
 			addLog("Warning: Failed to update latestSkeetsAmount after init: %v", errUpdate)
@@ -189,6 +190,7 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 				"latestSkeetsAmount":  newSentiment.SkeetsAmount,
 				"latestDisasterCount": newSentiment.DisasterCount,
 				"latestSentiment":     newSentiment.AverageSentiment,
+				"lastSkeetTimestamp":  newSentiment.TimeStamp, // Update last timestamp
 			})
 			if errUpdate != nil {
 				addLog("Failed to update location fields: %v", errUpdate)
@@ -199,12 +201,23 @@ func ProcessLocationAvgSentiment(firestoreClient *firestore.Client, locationID s
 		} else {
 			addLog("No new skeets")
 			addLog("Updating timestamp of latest sentiment")
+
 			e := db.UpdateLocSentimentTimestampWithData(firestoreClient, locationData, locationID, end)
 			if e != nil {
 				addLog("Failed to update avgLocation field with new timestamp: %v", e)
 				log.Println(logBuilder.String())
 				return err
 			}
+
+			errUpdate := db.UpdateLocationFields(firestoreClient, locationID, map[string]interface{}{
+				"lastSkeetTimestamp": end,
+			})
+			if errUpdate != nil {
+				addLog("Failed to update location fields: %v", errUpdate)
+				log.Println(logBuilder.String())
+				return errUpdate
+			}
+
 		}
 	}
 	log.Println(logBuilder.String())
