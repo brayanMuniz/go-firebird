@@ -1,6 +1,7 @@
 package types
 
 type LocationData struct {
+	ID                  string                 `firestore:"-"` // tell firestore to ignore
 	LocationName        string                 `firestore:"locationName"`
 	FormattedAddress    string                 `firestore:"formattedAddress"`
 	Lat                 float64                `firestore:"lat"`

@@ -290,3 +290,45 @@ func UpdateLocationGeocoding(client *firestore.Client, locationName string) {
 	}
 	log.Printf("\nSuccessfully updated geocoding data for %s", locationName)
 }
+
+func GetLocationsForDisasterCheck(client *firestore.Client, sentimentThreshold float32) ([]types.LocationData, error) {
+	ctx := context.Background()
+	var potentialDisasterLocations []types.LocationData
+	var minLat = 24.0
+	var maxLat = 50.0
+	var minLong = -125.0
+	var maxLong = -66.0
+
+	query := client.Collection("locations").Where("latestSentiment", "<=", sentimentThreshold).Where("lat", ">=", minLat).Where("lat", "<=", maxLat).Where("long", ">=", minLong).Where("long", "<=", maxLong)
+
+	// TODO: adding other filters if needed (e.g., lastSkeetTimestamp within a certain period?)
+
+	iter := query.Documents(ctx)
+	defer iter.Stop() // Ensure iterator resources are released
+
+	log.Printf("Fetching locations with sentiment <= %.2f for disaster check...", sentimentThreshold)
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break // End of results
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error iterating locations for disaster check: %w", err)
+		}
+
+		var location types.LocationData
+		if err := doc.DataTo(&location); err != nil {
+			log.Printf("Warning: Error converting document %s to LocationData: %v. Skipping.", doc.Ref.ID, err)
+			continue
+		}
+
+		// Manually add the Firestore Document ID to the struct
+		location.ID = doc.Ref.ID
+
+		potentialDisasterLocations = append(potentialDisasterLocations, location)
+	}
+
+	log.Printf("Found %d locations meeting disaster check criteria.", len(potentialDisasterLocations))
+	return potentialDisasterLocations, nil
+}
