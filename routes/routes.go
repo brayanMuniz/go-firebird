@@ -59,7 +59,7 @@ func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client, 
 	})
 
 	r.GET("/api/demo/disaster/add", func(c *gin.Context) {
-		handlers.AddDisasterDemoData(c)
+		handlers.AddDisasterDemoData(c, firestoreClient, nlpClient)
 	})
 
 	// api routes

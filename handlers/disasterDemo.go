@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"cloud.google.com/go/firestore"
+	language "cloud.google.com/go/language/apiv2"
 	"encoding/csv"
 	"fmt"
+	// "go-firebird/processor"
 	"go-firebird/types"
 	"io"
 	"net/http"
@@ -33,7 +36,7 @@ const (
 var placeholderAuthor = types.Author{
 	DID:         placeholderDid,
 	Handle:      placeholderHandle,
-	DisplayName: "Placeholder Account",
+	DisplayName: "Disaster Test", // NOTE:  this is what will be used to delete skeets
 	Avatar:      placeholderAvatar,
 	CreatedAt:   time.Now().Format(time.RFC3339),
 	Labels:      []types.Label{},
@@ -108,7 +111,7 @@ func convertToFeedResponse(records []CsvRecord) types.FeedResponse {
 	return response
 }
 
-func AddDisasterDemoData(c *gin.Context) {
+func AddDisasterDemoData(c *gin.Context, firestoreClient *firestore.Client, nlpClient *language.Client) {
 	fmt.Println("Making Data Good")
 
 	// Read csv file
@@ -157,8 +160,21 @@ func AddDisasterDemoData(c *gin.Context) {
 
 	feedData := convertToFeedResponse(disasterRecords)
 
-	// TODO: extract processor.feed  logic, extract the logic so it does NOT save it
+	f1 := make([]types.FeedEntry, 0, 1)
+	f1 = append(f1, feedData.Feed[0])
 
-	c.JSON(http.StatusOK, gin.H{"uwu": feedData})
+	// Assemble the final FeedResponse
+	testFeed := types.FeedResponse{
+		Feed:   f1,
+		Cursor: "", // No real cursor for this demo data
+	}
+
+	// TODO:
+	// processor.SaveFeed(testFeed, firestoreClient, nlpClient)
+	// then use the specified value to delete the skeet
+
+	// WARNING: If I delete the data before the cron job at 12, the location wont update the sentiment
+
+	c.JSON(http.StatusOK, gin.H{"uwu": testFeed})
 
 }
