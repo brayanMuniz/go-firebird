@@ -58,6 +58,10 @@ func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client, 
 		handlers.RunDisasterDetection(c, firestoreClient)
 	})
 
+	r.GET("/api/demo/disaster/add", func(c *gin.Context) {
+		handlers.AddDisasterDemoData(c)
+	})
+
 	// api routes
 	api := r.Group("/api/firebird")
 	{
