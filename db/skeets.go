@@ -234,3 +234,61 @@ func UpdateSkeetContent(client *firestore.Client, skeetID, newContent string) (*
 	fmt.Printf("Skeet with ID '%s' updated successfully.\n", hashedSkeetID)
 	return res, nil
 }
+
+const (
+	displayNameTest = "Disaster Test"
+	queryChunkSize  = 500
+)
+
+func DeleteAllTestSkeets(dbClient *firestore.Client) (int, error) {
+	ctx := context.Background()
+	totalScheduledForDelete := 0
+	log.Printf("Starting deletion of skeets with displayName: '%s' using BulkWriter", displayNameTest)
+
+	collRef := dbClient.Collection("skeets")
+	query := collRef.Where("displayName", "==", displayNameTest)
+
+	bulkWriter := dbClient.BulkWriter(ctx)
+
+	for {
+		docsProcessedInChunk := 0
+
+		iter := query.Limit(queryChunkSize).Documents(ctx)
+
+		for {
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break // No more documents in this chunk
+			}
+			if err != nil {
+				log.Printf("Error iterating documents during delete query: %v", err)
+				bulkWriter.End()
+				return totalScheduledForDelete, fmt.Errorf("failed during document iteration: %w", err)
+			}
+
+			_, err = bulkWriter.Delete(doc.Ref)
+			if err != nil {
+				log.Printf("Error scheduling delete for doc %s: %v", doc.Ref.ID, err)
+			} else {
+				totalScheduledForDelete++
+				docsProcessedInChunk++
+				log.Printf("Scheduled doc %s for deletion", doc.Ref.ID)
+			}
+		}
+
+		if docsProcessedInChunk < queryChunkSize {
+			log.Printf("Processed final chunk (%d documents).", docsProcessedInChunk)
+			break // Exit the outer loop
+		} else {
+			log.Printf("Processed chunk of %d documents. Fetching next chunk...", docsProcessedInChunk)
+		}
+
+	}
+
+	// End the BulkWriter operation
+	log.Printf("Ending BulkWriter operation. Total scheduled for delete: %d", totalScheduledForDelete)
+	bulkWriter.End() // IMPORTANT: Call End() to finalize.
+
+	log.Printf("Finished deletion process. Total skeets scheduled for deletion: %d\n", totalScheduledForDelete)
+	return totalScheduledForDelete, nil
+}

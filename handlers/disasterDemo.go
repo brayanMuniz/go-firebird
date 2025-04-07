@@ -1,11 +1,14 @@
 package handlers
 
 import (
-	"cloud.google.com/go/firestore"
-	language "cloud.google.com/go/language/apiv2"
 	"encoding/csv"
 	"fmt"
+
+	"cloud.google.com/go/firestore"
+	language "cloud.google.com/go/language/apiv2"
+
 	// "go-firebird/processor"
+	"go-firebird/db"
 	"go-firebird/types"
 	"io"
 	"net/http"
@@ -174,7 +177,21 @@ func AddDisasterDemoData(c *gin.Context, firestoreClient *firestore.Client, nlpC
 	// then use the specified value to delete the skeet
 
 	// WARNING: If I delete the data before the cron job at 12, the location wont update the sentiment
+	// will have to copy some of the logic over to a new function in order to update it
+
+	// result := processor.SaveFeed(testFeed, firestoreClient, nlpClient)
 
 	c.JSON(http.StatusOK, gin.H{"uwu": testFeed})
 
+}
+
+func DeleteDisasterDemoData(c *gin.Context, firestoreClient *firestore.Client) {
+	amountDeleted, err := db.DeleteAllTestSkeets(firestoreClient)
+	if err != nil {
+		fmt.Println(err)
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"Amount deleted": amountDeleted})
 }
