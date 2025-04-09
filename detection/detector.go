@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	sentimentThreshold  float32 = -0.
+	sentimentThreshold  float32 = -0.33
 	minDisasterCount    int     = 3    // Min count in *any* disaster category to be a seed
 	distanceThresholdKM         = 50.0 // Max distance (km) to cluster locations
 	earthRadiusKM               = 6371.0
@@ -23,9 +23,9 @@ const (
 	critSkeetThreshold   = 150
 
 	// Sentiment
-	mediumSentThreshold float32 = -0.40
-	highSentThreshold   float32 = -0.50
-	critSentThreshold   float32 = -0.60
+	mediumSentThreshold float32 = -.43
+	highSentThreshold   float32 = -.53
+	critSentThreshold   float32 = -.63
 
 	// Location Count (Geographic Spread)
 	mediumLocCountThreshold = 5
@@ -228,18 +228,17 @@ func createDisasterFromCluster(cluster []*types.LocationData, clusterType types.
 		disaster.LastUpdate = latestLastTime.UTC().Format(time.RFC3339)
 	}
 
-	if disaster.TotalSkeetsAmount >= critSkeetThreshold ||
-		disaster.ClusterSentiment <= critSentThreshold ||
-		disaster.LocationCount >= critLocCountThreshold {
-		disaster.Severity = types.Critical
-	} else if disaster.TotalSkeetsAmount >= highSkeetThreshold ||
-		disaster.ClusterSentiment <= highSentThreshold ||
-		disaster.LocationCount >= highLocCountThreshold {
-		disaster.Severity = types.High
-	} else if disaster.TotalSkeetsAmount >= mediumSkeetThreshold ||
-		disaster.ClusterSentiment <= mediumSentThreshold ||
-		disaster.LocationCount >= mediumLocCountThreshold {
+	// set sev type
+	if disaster.ClusterSentiment < mediumSentThreshold {
 		disaster.Severity = types.Medium
+	}
+
+	if disaster.ClusterSentiment < highSentThreshold {
+		disaster.Severity = types.High
+	}
+
+	if disaster.ClusterSentiment < critSentThreshold {
+		disaster.Severity = types.Critical
 	}
 
 	// Sort LocationIDs for consistency
