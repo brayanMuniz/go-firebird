@@ -123,10 +123,8 @@ func fetchSkeetsForDisaster(
 		return "", nil // No skeets found
 	}
 
-	// Combine skeets with a clear separator
 	combined := strings.Join(allSkeetsContent, "\n---\n")
 
-	// Truncate if necessary (safety measure)
 	if len(combined) > maxPromptLength {
 		log.Printf("Warning: Combined skeet text for disaster %s exceeds max length (%d), truncating.", disaster.ID, maxPromptLength)
 		combined = combined[:maxPromptLength]
@@ -142,7 +140,7 @@ func callOpenAISummary(
 	disasterType types.Category,
 	client *openai.Client,
 ) (string, error) {
-	prompt := fmt.Sprintf("Summarize the following collection of social media posts related to a potential %s event. Focus on the key impacts, locations mentioned, and overall situation described. Provide a concise summary (2-3 sentences maximum):\n\n---\n%s\n---\n\nSummary:", disasterType, skeetText)
+	prompt := fmt.Sprintf("Summarize the following collection of social media posts related to a potential %s event. Focus on the key impacts, locations mentioned, and overall situation described. If a tweet feels incongruent to the disaster type or location, disregard the tweet from the summary. Provide a concise summary (2-3 sentences maximum):\n\n---\n%s\n---\n\nSummary:", disasterType, skeetText)
 
 	resp, err := client.CreateChatCompletion(
 		ctx,

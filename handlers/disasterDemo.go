@@ -158,7 +158,10 @@ func AddDisasterDemoData(c *gin.Context, firestoreClient *firestore.Client, nlpC
 			Prediction: rec[2],
 		}
 
-		disasterRecords = append(disasterRecords, d)
+		if d.Prediction == "earthquake" {
+			disasterRecords = append(disasterRecords, d) // We are currently missing earthquake disaster in the db
+		}
+
 	}
 
 	feedData := convertToFeedResponse(disasterRecords)
@@ -167,12 +170,13 @@ func AddDisasterDemoData(c *gin.Context, firestoreClient *firestore.Client, nlpC
 	f1 = append(f1, feedData.Feed[0])
 
 	// Assemble the final FeedResponse
-	testFeed := types.FeedResponse{
-		Feed:   f1,
-		Cursor: "", // No real cursor for this demo data
-	}
+	//	testFeed := types.FeedResponse{
+	//		Feed:   f1,
+	//		Cursor: "", // No real cursor for this demo data
+	//	}
 
 	// TODO:
+	// We only want demo data, so only get
 	// processor.SaveFeed(testFeed, firestoreClient, nlpClient)
 	// then use the specified value to delete the skeet
 
@@ -181,7 +185,7 @@ func AddDisasterDemoData(c *gin.Context, firestoreClient *firestore.Client, nlpC
 
 	// result := processor.SaveFeed(testFeed, firestoreClient, nlpClient)
 
-	c.JSON(http.StatusOK, gin.H{"uwu": testFeed})
+	c.JSON(http.StatusOK, gin.H{"uwu": feedData})
 
 }
 

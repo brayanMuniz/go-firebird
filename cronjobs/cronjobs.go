@@ -118,8 +118,7 @@ func InitCronJobs(firestoreClient *firestore.Client, nlpClient *language.Client)
 	// Earthquake Feed: Run every 4 hours starting at 1:00.
 	_, err = c.AddFunc("0 1-23/4 * * *", func() {
 		log.Println("\nCronJob: EarthQuake Feed Running")
-		callFeed(earthQuakeURI)
-		out, err := callFeed(fireURI)
+		out, err := callFeed(earthQuakeURI)
 		if err != nil {
 			log.Println("Error getting Earthquake Feed", err)
 		} else {

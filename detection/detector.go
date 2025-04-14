@@ -2,12 +2,11 @@ package detection
 
 import (
 	"fmt"
+	"github.com/google/uuid"
 	"go-firebird/types"
 	"math"
 	"sort"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 const (
