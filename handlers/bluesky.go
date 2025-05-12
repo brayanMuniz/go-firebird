@@ -90,6 +90,10 @@ func FetchBlueskyHandler(c *gin.Context, firestoreClient *firestore.Client, nlpC
 	}
 
 	resultsList := processor.SaveFeed(out, firestoreClient, nlpClient)
+	// c.JSON(http.StatusOK, resultsList)
+	c.JSON(http.StatusOK, gin.H{
+		"resultList": resultsList,
+		"cursor":     out.Cursor,
+	})
 
-	c.JSON(http.StatusOK, resultsList)
 }

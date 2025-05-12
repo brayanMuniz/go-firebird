@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	sentimentThreshold  float32 = -0.33
+	sentimentThreshold  float32 = -0.05
 	minDisasterCount    int     = 3    // Min count in *any* disaster category to be a seed
 	distanceThresholdKM         = 50.0 // Max distance (km) to cluster locations
 	earthRadiusKM               = 6371.0

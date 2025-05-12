@@ -8,7 +8,9 @@ import (
 	"googlemaps.github.io/maps"
 )
 
-func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client, geocodeClient *maps.Client) *gin.Engine {
+func SetupRouter(firestoreClient *firestore.Client, nlpClient *language.Client,
+	geocodeClient *maps.Client) *gin.Engine {
+
 	r := gin.Default()
 
 	r.GET("/", func(c *gin.Context) {

@@ -19,7 +19,7 @@ import (
 
 // RunDisasterDetection fetches candidate locations, runs detection, generates summaries, and saves results.
 func RunDisasterDetection(c *gin.Context, firestoreClient *firestore.Client) {
-	const detectionSentimentThreshold float32 = -0.3
+	const detectionSentimentThreshold float32 = 0.0 // -0.3
 
 	log.Println("Handler: Starting disaster detection process...")
 
