@@ -1,4 +1,4 @@
-# Firebird Core (go-firebird)
+# go-firebird
 
 **go-firebird** is the backend service for the Firebird project. It's responsible for 
 ingesting data from the Bluesky social platform, processing skeets for sentiment and location, 
